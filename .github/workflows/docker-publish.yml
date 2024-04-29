@@ -47,6 +47,9 @@ jobs:
       - name: Check install!
         run: cosign version
 
+      - name: Check Docker version!
+        run: docker version
+
       # Set up BuildKit Docker container builder to be able to build
       # multi-platform images and export cache
       # https://github.com/docker/setup-buildx-action
