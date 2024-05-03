@@ -82,6 +82,8 @@ def detect_motion(frameCount):
 		# lock
 		with lock:
 			outputFrame = frame.copy()
+		
+		cv2.waitKey(15)
 
 def generate():
 	# grab global references to the output frame and lock variables
