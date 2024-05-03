@@ -4,7 +4,7 @@
 #-----------------------------------------------------------------------------------------
 
 # import the necessary packages
-from motion_detection import MotionDetector
+from motion_detection.motiondetector import MotionDetector
 from flask import Response
 from flask import Flask
 from flask import render_template
