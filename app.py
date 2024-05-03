@@ -27,7 +27,7 @@ app = Flask(__name__)
 # warmup
 #vs = VideoStream(usePiCamera=1).start()
 #vs = VideoStream(src=0).start()
-vs = cv2.VideoCapture("/var/lib/vidstorage/testing.mpeg")
+vs = cv2.VideoCapture("/var/lib/vidstorage/testing.mp4")
 time.sleep(2.0)
 
 @app.route("/")
