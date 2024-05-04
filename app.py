@@ -23,9 +23,7 @@ else:
 
 # import the necessary packages
 from motion_detection.motiondetector import MotionDetector
-from flask import Response
-from flask import Flask
-from flask import render_template
+from flask import Response, Flask, render_template
 import threading
 import datetime
 import imutils
@@ -53,7 +51,8 @@ def index():
 	# return the rendered template
 	return render_template("index.html")
 
-def detect_motion(frameCount):
+def detect_motion():
+	frameCount=10
 	# grab global references to the video stream, output frame, and
 	# lock variables
 	global vs, outputFrame, lock
@@ -62,8 +61,6 @@ def detect_motion(frameCount):
     # read thus far
 	md = MotionDetector(accumWeight=0.1)
 	total = 0
-
-	logger.info("Frame Count: %s", vs.get(cv2.CAP_PROP_FRAME_COUNT))
 
     # loop over frames from the video stream
 	while True:
@@ -139,8 +136,7 @@ def video_feed():
 		mimetype = "multipart/x-mixed-replace; boundary=frame")
 
 # start a thread that will perform motion detection
-t = threading.Thread(target=detect_motion, args=(7,))
-t.daemon = True
+t = threading.Thread(target=detect_motion, args=(), daemon=True)
 t.start()
 
 # Used for starting locally. Under gunircorn this won't get hit
