@@ -1,5 +1,5 @@
 # This workflow runs all unit tests, if pass then it signs the code and publishs a docker image to ghrc
-name: Docker Publush
+name: Docker Publish
 
 on:
   #schedule:

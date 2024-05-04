@@ -1,6 +1,9 @@
+# web
 gunicorn
 flask
 gevent
+
+# opencv
 opencv-python-headless
 numpy
 imutils
