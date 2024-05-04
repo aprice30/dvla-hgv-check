@@ -3,6 +3,14 @@
 # Licensed under the MIT License. See LICENSE in the project root for license information.
 #-----------------------------------------------------------------------------------------
 
+# Setup logging
+import logging, sys
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s] %(message)s",
+    datefmt="%d/%b/%Y %H:%M:%S",
+    stream=sys.stdout)
+
 # import the necessary packages
 from motion_detection.motiondetector import MotionDetector
 from flask import Response
