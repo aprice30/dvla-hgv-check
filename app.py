@@ -143,9 +143,6 @@ t = threading.Thread(target=detect_motion, args=(7,))
 t.daemon = True
 t.start()
 
-# start the flask app
-app.run(host="0.0.0.0", port=5000, debug=True,
-	threaded=True, use_reloader=False)
-
-# release the video stream pointer
-#vs.stop()
+# Used for starting locally. Under gunircorn this won't get hit
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True, threaded=True, use_reloader=False)
