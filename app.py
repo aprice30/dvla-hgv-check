@@ -11,6 +11,9 @@ logging.basicConfig(
     datefmt="%d/%b/%Y %H:%M:%S",
     stream=sys.stdout)
 
+logger = logging.getLogger(__name__)
+logger.error('test')
+
 # import the necessary packages
 from motion_detection.motiondetector import MotionDetector
 from flask import Response
@@ -148,8 +151,6 @@ if __name__ == '__main__':
 	# start the flask app
 	app.run(host="0.0.0.0", port=5000, debug=True,
 		threaded=True, use_reloader=False)
-	
-	
 
 # release the video stream pointer
 #vs.stop()
