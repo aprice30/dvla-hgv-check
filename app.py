@@ -3,6 +3,24 @@
 # Licensed under the MIT License. See LICENSE in the project root for license information.
 #-----------------------------------------------------------------------------------------
 
+# Setup logging first
+import logging, sys
+
+if __name__ == "main":
+	# Running directly so setup custom logging
+	logging.basicConfig(
+		level=logging.INFO,
+		format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s] %(message)s",
+		datefmt="%d/%b/%Y %H:%M:%S",
+		stream=sys.stdout)
+	logger = logging.getLogger(__name__)
+else:
+	# Running under gunicorn so use their logger
+	gunicorn_logger = logging.getLogger('gunicorn.error')
+	logger = logging.getLogger(__name__)
+	logger.setLevel(gunicorn_logger.level)
+	logger.handlers = gunicorn_logger.handlers
+
 # import the necessary packages
 from motion_detection.motiondetector import MotionDetector
 from flask import Response
@@ -45,17 +63,15 @@ def detect_motion(frameCount):
 	md = MotionDetector(accumWeight=0.1)
 	total = 0
 
-	print("Frame Count:", vs.get(cv2.CAP_PROP_FRAME_COUNT))
+	logger.info("Frame Count: %s", vs.get(cv2.CAP_PROP_FRAME_COUNT))
 
     # loop over frames from the video stream
 	while True:
 		# read the next frame from the video stream, resize it,
 		# convert the frame to grayscale, and blur it
 		ret, frame = vs.read()
-		print(frame, ret)
 
 		if not ret:
-			print("No more frames")
 			break
 
 		frame = imutils.resize(frame, width=400)
@@ -76,7 +92,6 @@ def detect_motion(frameCount):
 			motion = md.detect(gray)
 			# check to see if motion was found in the frame
 			if motion is not None:
-				print("Motion Found")
 				# unpack the tuple and draw the box surrounding the
 				# "motion area" on the output frame
 				(thresh, (minX, minY, maxX, maxY)) = motion
@@ -91,8 +106,6 @@ def detect_motion(frameCount):
 		# lock
 		with lock:
 			outputFrame = frame.copy()
-		
-		cv2.waitKey(15)
 
 def generate():
 	# grab global references to the output frame and lock variables
@@ -125,18 +138,14 @@ def video_feed():
 	return Response(generate(),
 		mimetype = "multipart/x-mixed-replace; boundary=frame")
 
-# check to see if this is the main thread of execution
-if __name__ == '__main__':
-	# start a thread that will perform motion detection
-	t = threading.Thread(target=detect_motion, args=(7,))
-	t.daemon = True
-	t.start()
+# start a thread that will perform motion detection
+t = threading.Thread(target=detect_motion, args=(7,))
+t.daemon = True
+t.start()
 
-	# start the flask app
-	app.run(host="0.0.0.0", port=5000, debug=True,
-		threaded=True, use_reloader=False)
-	
-	
+# start the flask app
+app.run(host="0.0.0.0", port=5000, debug=True,
+	threaded=True, use_reloader=False)
 
 # release the video stream pointer
 #vs.stop()
