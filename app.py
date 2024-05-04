@@ -45,11 +45,19 @@ def detect_motion(frameCount):
 	md = MotionDetector(accumWeight=0.1)
 	total = 0
 
+	print("Frame Count:", vs.get(cv2.CAP_PROP_FRAME_COUNT))
+
     # loop over frames from the video stream
 	while True:
 		# read the next frame from the video stream, resize it,
 		# convert the frame to grayscale, and blur it
-		frame = vs.read()
+		ret, frame = vs.read()
+		print(frame, ret)
+
+		if not ret:
+			print("No more frames")
+			break
+
 		frame = imutils.resize(frame, width=400)
 		gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 		gray = cv2.GaussianBlur(gray, (7, 7), 0)
@@ -68,6 +76,7 @@ def detect_motion(frameCount):
 			motion = md.detect(gray)
 			# check to see if motion was found in the frame
 			if motion is not None:
+				print("Motion Found")
 				# unpack the tuple and draw the box surrounding the
 				# "motion area" on the output frame
 				(thresh, (minX, minY, maxX, maxY)) = motion
