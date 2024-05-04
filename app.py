@@ -132,9 +132,16 @@ if __name__ == '__main__':
 	t.daemon = True
 	t.start()
 	
+	import database
+	from database.setup import Setup
+	setup = Setup("hgv_check.db")
+	setup.run()
+
 	# start the flask app
 	app.run(host="0.0.0.0", port=5000, debug=True,
 		threaded=True, use_reloader=False)
+	
+	
 
 # release the video stream pointer
 #vs.stop()
