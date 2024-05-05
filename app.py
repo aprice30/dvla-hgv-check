@@ -22,7 +22,6 @@ else:
 	logger.handlers = gunicorn_logger.handlers
 
 # import the necessary packages
-from motion_detection.motiondetector import MotionDetector
 from flask import Response, Flask, render_template
 import threading
 import datetime
@@ -57,52 +56,44 @@ def detect_motion():
 	# lock variables
 	global vs, outputFrame, lock
 	
-    # initialize the motion detector and the total number of frames
-    # read thus far
-	md = MotionDetector(accumWeight=0.1)
-	total = 0
+	ret, frame1 = vs.read()
+	if not ret:
+		return;
+
+	frame1 = imutils.resize(frame1, width=720)
 
     # loop over frames from the video stream
 	while True:
-		# read the next frame from the video stream, resize it,
-		# convert the frame to grayscale, and blur it
-		ret, frame = vs.read()
-
+		ret, frame2 = vs.read()
 		if not ret:
-			break
+			break;
 
-		frame = imutils.resize(frame, width=400)
-		gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-		gray = cv2.GaussianBlur(gray, (7, 7), 0)
-		
-		# grab the current timestamp and draw it on the frame
-		timestamp = datetime.datetime.now()
-		cv2.putText(frame, timestamp.strftime(
-			"%A %d %B %Y %I:%M:%S%p"), (10, frame.shape[0] - 10),
-			cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
-		
-        # if the total number of frames has reached a sufficient
-		# number to construct a reasonable background model, then
-		# continue to process the frame
-		if total > frameCount:
-			# detect motion in the image
-			motion = md.detect(gray)
-			# check to see if motion was found in the frame
-			if motion is not None:
-				# unpack the tuple and draw the box surrounding the
-				# "motion area" on the output frame
-				(thresh, (minX, minY, maxX, maxY)) = motion
-				cv2.rectangle(frame, (minX, minY), (maxX, maxY),
-					(0, 0, 255), 2)
-		
-		# update the background model and increment the total number
-		# of frames read thus far
-		md.update(gray)
-		total += 1
+		frame2 = imutils.resize(frame2, width=720)
+
+		diff = cv2.absdiff(frame1, frame2)
+		diff_gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+		blur = cv2.GaussianBlur(diff_gray, (5, 5), 0)
+		_, thresh = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
+		dilated = cv2.dilate(thresh, None, iterations=3)
+
+		contours, _ = cv2.findContours( dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+		for contour in contours:
+			(x, y, w, h) = cv2.boundingRect(contour)
+    		
+			if cv2.contourArea(contour) < 900:
+				continue
+			
+			cv2.rectangle(frame1, (x, y), (x+w, y+h), (0, 255, 0), 2)
+			cv2.putText(frame1, "STATUS: {}".format('MOTION DETECTED'), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 
+			   1, (217, 10, 10), 2)
+
 		# acquire the lock, set the output frame, and release the
 		# lock
 		with lock:
-			outputFrame = frame.copy()
+			outputFrame = frame1.copy()
+
+		frame1 = frame2
 
 def generate():
 	# grab global references to the output frame and lock variables
