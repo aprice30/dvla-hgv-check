@@ -28,8 +28,8 @@ import datetime
 import imutils
 import time
 import cv2
-import motion_processor
-from motion_processor.motionprocessor import MotionProcessor
+import plate_processor
+from plate_processor.plateprocessor import PlateProcessor
 
 # initialize the output frame and a lock used to ensure thread-safe
 # exchanges of the output frames (useful when multiple browsers/tabs
@@ -69,9 +69,10 @@ def detect_motion():
 	if not ret:
 		return;
 
-	frame1 = imutils.resize(frame1, width=720)
+	frameWidth = 1500
+	frame1 = imutils.resize(frame1, width=frameWidth)
 
-	processor = MotionProcessor()
+	processor = PlateProcessor()
 
     # loop over frames from the video stream
 	while True:
@@ -79,7 +80,7 @@ def detect_motion():
 		if not ret:
 			break
 
-		frame2 = imutils.resize(frame2, width=720)
+		frame2 = imutils.resize(frame2, width=frameWidth)
 
 		# Load frames into processor
 		processor.loadAndFindContours(frame1=frame1, frame2=frame2)

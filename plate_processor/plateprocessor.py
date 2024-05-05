@@ -3,7 +3,7 @@ import imutils
 from skimage.segmentation import clear_border
 import numpy as np
 
-class MotionProcessor:
+class PlateProcessor:
     def __init__(self, minMotionArea = 2000):
         self.minMotionArea = minMotionArea
         self.minAR = 4
