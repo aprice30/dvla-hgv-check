@@ -42,7 +42,7 @@ app = Flask(__name__)
 # warmup
 #vs = VideoStream(usePiCamera=1).start()
 #vs = VideoStream(src=0).start()
-vs = cv2.VideoCapture("/var/lib/vidstorage/testing.mp4")
+vs = cv2.VideoCapture("/var/lib/vidstorage/testing.MOV")
 time.sleep(2.0)
 
 @app.route("/")
@@ -51,7 +51,6 @@ def index():
 	return render_template("index.html")
 
 def detect_motion():
-	frameCount=10
 	# grab global references to the video stream, output frame, and
 	# lock variables
 	global vs, outputFrame, lock
@@ -66,7 +65,7 @@ def detect_motion():
 	while True:
 		ret, frame2 = vs.read()
 		if not ret:
-			break;
+			break
 
 		frame2 = imutils.resize(frame2, width=720)
 
@@ -77,22 +76,26 @@ def detect_motion():
 		dilated = cv2.dilate(thresh, None, iterations=3)
 
 		contours, _ = cv2.findContours( dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
 		for contour in contours:
 			(x, y, w, h) = cv2.boundingRect(contour)
     		
-			if cv2.contourArea(contour) < 900:
+			area = cv2.contourArea(contour)
+			if area < 2000:
 				continue
-			
+
+			#cv2.putText(frame1, "Size: {}".format(area), (x, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0 ,255), 2);
 			cv2.rectangle(frame1, (x, y), (x+w, y+h), (0, 255, 0), 2)
 			cv2.putText(frame1, "STATUS: {}".format('MOTION DETECTED'), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 
 			   1, (217, 10, 10), 2)
+			
+
 
 		# acquire the lock, set the output frame, and release the
 		# lock
 		with lock:
 			outputFrame = frame1.copy()
 
+		time.sleep(0.1)
 		frame1 = frame2
 
 def generate():
