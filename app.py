@@ -28,6 +28,8 @@ import datetime
 import imutils
 import time
 import cv2
+import motion_processor
+from motion_processor.motionprocessor import MotionProcessor
 
 # initialize the output frame and a lock used to ensure thread-safe
 # exchanges of the output frames (useful when multiple browsers/tabs
@@ -42,13 +44,21 @@ app = Flask(__name__)
 # warmup
 #vs = VideoStream(usePiCamera=1).start()
 #vs = VideoStream(src=0).start()
-vs = cv2.VideoCapture("/var/lib/vidstorage/testing.MOV")
+vs = cv2.VideoCapture("/var/lib/vids/testing.MOV")
 time.sleep(2.0)
 
 @app.route("/")
 def index():
 	# return the rendered template
 	return render_template("index.html")
+
+def locate_license_plate_candidates(gray, keep=5):
+        # perform a blackhat morphological operation that will allow
+        # us to reveal dark regions (i.e., text) on light backgrounds
+        # (i.e., the license plate itself)
+        rectKern = cv2.getStructuringElement(cv2.MORPH_RECT, (13, 5))
+        blackhat = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, rectKern)
+        return blackhat
 
 def detect_motion():
 	# grab global references to the video stream, output frame, and
@@ -61,6 +71,8 @@ def detect_motion():
 
 	frame1 = imutils.resize(frame1, width=720)
 
+	processor = MotionProcessor()
+
     # loop over frames from the video stream
 	while True:
 		ret, frame2 = vs.read()
@@ -69,31 +81,19 @@ def detect_motion():
 
 		frame2 = imutils.resize(frame2, width=720)
 
-		diff = cv2.absdiff(frame1, frame2)
-		diff_gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-		blur = cv2.GaussianBlur(diff_gray, (5, 5), 0)
-		_, thresh = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
-		dilated = cv2.dilate(thresh, None, iterations=3)
+		# Load frames into processor
+		processor.loadAndFindContours(frame1=frame1, frame2=frame2)
 
-		contours, _ = cv2.findContours( dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-		for contour in contours:
-			(x, y, w, h) = cv2.boundingRect(contour)
-    		
-			area = cv2.contourArea(contour)
-			if area < 2000:
-				continue
-
-			#cv2.putText(frame1, "Size: {}".format(area), (x, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0 ,255), 2);
-			cv2.rectangle(frame1, (x, y), (x+w, y+h), (0, 255, 0), 2)
-			cv2.putText(frame1, "STATUS: {}".format('MOTION DETECTED'), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 
-			   1, (217, 10, 10), 2)
-			
-
+		if processor.isMotionDetected():
+			output = processor.getOutputFrame()
+		else:
+			# Just show frame as was
+			output = frame1
 
 		# acquire the lock, set the output frame, and release the
 		# lock
 		with lock:
-			outputFrame = frame1.copy()
+			outputFrame = output.copy()
 
 		time.sleep(0.1)
 		frame1 = frame2
