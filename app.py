@@ -35,6 +35,7 @@ from plate_processor.plateprocessor import PlateProcessor
 # exchanges of the output frames (useful when multiple browsers/tabs
 # are viewing the stream)
 outputFrame = None
+debugFrame = None
 lock = threading.Lock()
 
 # initialize a flask object
@@ -63,7 +64,7 @@ def locate_license_plate_candidates(gray, keep=5):
 def detect_motion():
 	# grab global references to the video stream, output frame, and
 	# lock variables
-	global vs, outputFrame, lock
+	global vs, outputFrame, debugFrame, lock
 	
 	ret, frame1 = vs.read()
 	if not ret:
@@ -78,13 +79,15 @@ def detect_motion():
 		if not ret:
 			break
 
-		output = processor.process(frame=frame2)
+		output, debug = processor.process(frame=frame2)
 
 		# acquire the lock, set the output frame, and release the
 		# lock
 		with lock:
 			if output is not None:
 				outputFrame = output.copy()
+			if debug is not None:
+				debugFrame = debug.copy()
 
 		time.sleep(0.1)
 
@@ -115,12 +118,47 @@ def generate():
 		# yield the output frame in the byte format
 		yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + 
 			bytearray(encodedImage) + b'\r\n')
+	
+def generate_debug():
+	# grab global references to the output frame and lock variables
+	global debugFrame, lock
+	
+	# loop over frames from the output stream
+	while True:
+		# wait until the lock is acquired
+		with lock:
+			# check if the output frame is available, otherwise skip
+			# the iteration of the loop
+			if debugFrame is None:
+				continue
+			
+			# encode the frame in JPEG format
+			try:
+				(flag, encodedImage) = cv2.imencode(".jpg", debugFrame)
+			except:
+				logger.exception("Failed to encode image")
+				continue
+			
+			# ensure the frame was successfully encoded
+			if not flag:
+				continue
+			
+		# yield the output frame in the byte format
+		yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + 
+			bytearray(encodedImage) + b'\r\n')
 
 @app.route("/video_feed")
 def video_feed():
 	# return the response generated along with the specific media
 	# type (mime type)
 	return Response(generate(),
+		mimetype = "multipart/x-mixed-replace; boundary=frame")
+
+@app.route("/debug_feed")
+def debug_feed():
+	# return the response generated along with the specific media
+	# type (mime type)
+	return Response(generate_debug(),
 		mimetype = "multipart/x-mixed-replace; boundary=frame")
 
 # start a thread that will perform motion detection
