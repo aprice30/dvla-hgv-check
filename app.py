@@ -69,10 +69,8 @@ def detect_motion():
 	if not ret:
 		return;
 
-	frameWidth = 1500
-	frame1 = imutils.resize(frame1, width=frameWidth)
-
 	processor = PlateProcessor()
+	processor.loadFirstFrame(frame1=frame1)
 
     # loop over frames from the video stream
 	while True:
@@ -80,24 +78,15 @@ def detect_motion():
 		if not ret:
 			break
 
-		frame2 = imutils.resize(frame2, width=frameWidth)
-
-		# Load frames into processor
-		processor.loadAndFindContours(frame1=frame1, frame2=frame2)
-
-		if processor.isMotionDetected():
-			output = processor.getOutputFrame()
-		else:
-			# Just show frame as was
-			output = frame1
+		output = processor.process(frame=frame2)
 
 		# acquire the lock, set the output frame, and release the
 		# lock
 		with lock:
-			outputFrame = output.copy()
+			if output is not None:
+				outputFrame = output.copy()
 
 		time.sleep(0.1)
-		frame1 = frame2
 
 def generate():
 	# grab global references to the output frame and lock variables
@@ -113,7 +102,11 @@ def generate():
 				continue
 			
 			# encode the frame in JPEG format
-			(flag, encodedImage) = cv2.imencode(".jpg", outputFrame)
+			try:
+				(flag, encodedImage) = cv2.imencode(".jpg", outputFrame)
+			except:
+				logger.exception("Failed to encode image")
+				continue
 			
 			# ensure the frame was successfully encoded
 			if not flag:

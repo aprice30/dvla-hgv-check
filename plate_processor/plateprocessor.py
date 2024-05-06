@@ -8,30 +8,62 @@ class PlateProcessor:
         self.minMotionArea = minMotionArea
         self.minAR = 4
         self.maxAR = 5
+
+        self.frameWidth = 1250
         return
     
-    def loadAndFindContours(self, frame1, frame2):
-        self.frame1 = frame1
-        self.frame2 = frame2
+    def loadFirstFrame(self, frame1):
+        self.frame1 = imutils.resize(frame1, width=self.frameWidth)
 
+    def process(self, frame):
+        output = self.frame1
+        
+        # Apply the same op to frame2 so its the same size as frame1
+        self.frame2 = imutils.resize(frame, width=self.frameWidth)
+
+        # First do a diff of the two frames, this will tell us areas
+        # which have changed and thus where motion has happened
         diff = cv2.absdiff(self.frame1, self.frame2)
         diff_gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(diff_gray, (5, 5), 0)
         _, thresh = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
         dilated = cv2.dilate(thresh, None, iterations=3)
 
-        self.contours, _ = cv2.findContours( dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # Now find the contours of the areas. These are the bounding boxes around the motion
+        contours, _ = cv2.findContours(dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-    def _includeContour(self, contour) -> bool:
-        return cv2.contourArea(contour) > self.minMotionArea
+        largestContourArea = 0
 
-    def isMotionDetected(self) -> bool:
-        for contour in self.contours:
-            # Motion only found if the contour is larger than the min size
-            if self._includeContour(contour):
-                return True
+        for contour in contours:
+            area = cv2.contourArea(contour)
             
-        return False
+            # Only look at contours larger than the min & only process if bigger than
+            # what we have seen before (a car/lorry will be the largest area of motion)
+            # TODO: Don't do largest only, if 2 cars are in frame it will ignore the smaller
+            if area < max(self.minMotionArea, largestContourArea):
+                continue;
+            largestContourArea = area
+        
+            # Draw a box around the motion
+            (x, y, w, h) = cv2.boundingRect(contour)
+            cv2.rectangle(output, (x, y), (x+w, y+h), (0, 255, 0), 2)
+
+            # Only look at the area triggering motion
+            # roi = output[y:y+h, x:x+w]
+            # roi_grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+
+            # cnts = self._find_numberplates(roi_grey)
+            # roi, lpCnt = self._locate_license_plate(roi_grey, cnts)
+
+            # if lpCnt is not None:
+            #     # Found a numberplace us it
+            #     (cx, cy, cw, ch) = cv2.boundingRect(lpCnt)
+
+            #     output = roi[cy:cy+ch, cx:cx+cw]
+
+        # Switch the frames so when we process frame n+1 against n
+        self.frame1 = self.frame2
+        return output
     
     def _find_numberplates(self, grey):
         # perform a blackhat morphological operation that will allow
@@ -114,30 +146,3 @@ class PlateProcessor:
         # return a 2-tuple of the license plate ROI and the contour
 		# associated with it
         return (roi, lpCnt)
-
-    def getOutputFrame(self):
-        output = self.frame1.copy()
-        area = 0
-
-        for contour in self.contours:
-            if self._includeContour(contour):
-                (x, y, w, h) = cv2.boundingRect(contour)
-
-                cv2.rectangle(output, (x, y), (x+w, y+h), (0, 255, 0), 2)
-                cv2.putText(output, "STATUS: {}".format('MOTION DETECTED'), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 
-                    1, (217, 10, 10), 2)
-                
-                # Find largest contour and use as output
-                # if cv2.contourArea(contour) > area:
-                #     # Only look at the area triggering motion
-                #     roi = output[y:y+h, x:x+w]
-                #     roi_grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-
-                #     cnts = self._find_numberplates(roi_grey)
-                #     roi, lpCnt = self._locate_license_plate(roi_grey, cnts)
-
-                #     if roi is not None:
-                #         # Found a numberplace us it
-                #         output = roi
-                #         break
-        return output
