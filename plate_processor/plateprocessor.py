@@ -38,25 +38,15 @@ class PlateProcessor:
         # Now find the contours of the areas. These are the bounding boxes around the motion
         contours, _ = cv2.findContours(dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        largestContourArea = 0
-
         for contour in contours:
             area = cv2.contourArea(contour)
             
-            # Only look at contours larger than the min & only process if bigger than
-            # what we have seen before (a car/lorry will be the largest area of motion)
-            # TODO: Don't do largest only, if 2 cars are in frame it will ignore the smaller
-            if area < max(self.minMotionArea, largestContourArea):
-                continue;
-            largestContourArea = area
-        
+            if area < self.minMotionArea:
+                continue
+
             # Draw a box around the motion
             (x, y, w, h) = cv2.boundingRect(contour)
             cv2.rectangle(output, (x, y), (x+w, y+h), (0, 255, 0), 2)
-
-            # Only look at the area triggering motion
-            roi = output[y:y+h, x:x+w]
-            self.debug = roi     
 
         # Switch the frames so when we process frame n+1 against n
         self.frame1 = self.frame2
