@@ -43,7 +43,7 @@ lock = threading.Lock()
 # warmup
 #vs = VideoStream(usePiCamera=1).start()
 #vs = VideoStream(src=0).start()
-vs = cv2.VideoCapture("/var/lib/vids/testing.MOV")
+vs = cv2.VideoCapture("/home/myuser/data/videos/testing_long.MOV")
 time.sleep(2.0)
 
 @app.route("/")
@@ -63,7 +63,7 @@ def detect_motion():
 	fps = int(vs.get(cv2.CAP_PROP_FPS))
 	app.logger.info("Video playing at %s fps", fps)
 
-	processor = MotionProcessor("/home/myuser/data")
+	processor = MotionProcessor("/home/myuser/data/grabs")
 	detector = MotionDetector(fps, processor)
 	detector.loadFirstFrame(frame1=frame1)
 
