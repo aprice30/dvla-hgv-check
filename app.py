@@ -53,24 +53,19 @@ def index():
 	# return the rendered template
 	return render_template("index.html")
 
-def locate_license_plate_candidates(gray, keep=5):
-        # perform a blackhat morphological operation that will allow
-        # us to reveal dark regions (i.e., text) on light backgrounds
-        # (i.e., the license plate itself)
-        rectKern = cv2.getStructuringElement(cv2.MORPH_RECT, (13, 5))
-        blackhat = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, rectKern)
-        return blackhat
-
 def detect_motion():
 	# grab global references to the video stream, output frame, and
 	# lock variables
 	global vs, outputFrame, debugFrame, lock
-	
+
 	ret, frame1 = vs.read()
 	if not ret:
 		return;
 
-	processor = PlateProcessor()
+	fps = int(vs.get(cv2.CAP_PROP_FPS))
+	logger.info("Video playing at %s fps", fps)
+
+	processor = PlateProcessor(fps, "/home/myuser/data")
 	processor.loadFirstFrame(frame1=frame1)
 
     # loop over frames from the video stream

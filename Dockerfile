@@ -18,7 +18,7 @@ RUN pip3 install --no-cache-dir wheel
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 FROM ubuntu:20.04 AS runner-image
-RUN apt-get update && apt-get install --no-install-recommends -y python3.9 python3-venv && \
+RUN apt-get update && apt-get install --no-install-recommends -y python3.9 python3-venv ffmpeg && \
 	apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --create-home myuser
@@ -26,6 +26,7 @@ COPY --from=builder-image /home/myuser/venv /home/myuser/venv
 
 USER myuser
 RUN mkdir /home/myuser/code
+RUN mkdir /home/myuser/data
 WORKDIR /home/myuser/code
 COPY . .
 
