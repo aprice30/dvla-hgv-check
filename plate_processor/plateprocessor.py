@@ -6,10 +6,7 @@ import ffmpegcv
 from collections import deque
 from datetime import datetime
 
-gunicorn_logger = logging.getLogger('gunicorn.error')
 logger = logging.getLogger(__name__)
-logger.setLevel(gunicorn_logger.level)
-logger.handlers = gunicorn_logger.handlers
 
 class PlateProcessor:
     def __init__(self, fps, outputPath, minMotionArea = 10000):

@@ -4,7 +4,12 @@
 #-----------------------------------------------------------------------------------------
 
 # Setup logging first
+import logging.handlers
 import logging, sys
+from flask import Response, Flask, render_template
+	
+# initialize a flask object
+app = Flask(__name__)
 
 if __name__ == "main":
 	# Running directly so setup custom logging
@@ -13,22 +18,19 @@ if __name__ == "main":
 		format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s] %(message)s",
 		datefmt="%d/%b/%Y %H:%M:%S",
 		stream=sys.stdout)
-	logger = logging.getLogger(__name__)
 else:
 	# Running under gunicorn so use their logger
 	gunicorn_logger = logging.getLogger('gunicorn.error')
-	logger = logging.getLogger(__name__)
-	logger.setLevel(gunicorn_logger.level)
-	logger.handlers = gunicorn_logger.handlers
+	rootLogger = logging.getLogger();
+	rootLogger.handlers = gunicorn_logger.handlers
+	rootLogger.setLevel(gunicorn_logger.level)
 
 # import the necessary packages
-from flask import Response, Flask, render_template
 import threading
 import datetime
 import imutils
 import time
 import cv2
-import plate_processor
 from plate_processor.plateprocessor import PlateProcessor
 
 # initialize the output frame and a lock used to ensure thread-safe
@@ -37,9 +39,6 @@ from plate_processor.plateprocessor import PlateProcessor
 outputFrame = None
 debugFrame = None
 lock = threading.Lock()
-
-# initialize a flask object
-app = Flask(__name__)
 
 # initialize the video stream and allow the camera sensor to
 # warmup
@@ -63,7 +62,7 @@ def detect_motion():
 		return;
 
 	fps = int(vs.get(cv2.CAP_PROP_FPS))
-	logger.info("Video playing at %s fps", fps)
+	app.logger.info("Video playing at %s fps", fps)
 
 	processor = PlateProcessor(fps, "/home/myuser/data")
 	processor.loadFirstFrame(frame1=frame1)
@@ -103,7 +102,7 @@ def generate():
 			try:
 				(flag, encodedImage) = cv2.imencode(".jpg", outputFrame)
 			except:
-				logger.exception("Failed to encode image")
+				app.logger.exception("Failed to encode image")
 				continue
 			
 			# ensure the frame was successfully encoded
@@ -131,7 +130,7 @@ def generate_debug():
 			try:
 				(flag, encodedImage) = cv2.imencode(".jpg", debugFrame)
 			except:
-				logger.exception("Failed to encode image")
+				app.logger.exception("Failed to encode image")
 				continue
 			
 			# ensure the frame was successfully encoded
