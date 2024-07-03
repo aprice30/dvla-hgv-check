@@ -34,8 +34,8 @@ class PlateProcessor:
         #fourcc = cv2.VideoWriter_fourcc(*'H264')
 
         # Create the filename
-        formatted_time = self.firstMotionTimestamp.strftime("%Y-%m-%d_%H-%M-%S")
-        fileName = "{}/{}.mp4".format(self.outputPath, formatted_time)
+        formatted_time = self.timestampOfFirstMotionFrame.strftime("%Y-%m-%d_%H-%M-%S")
+        fileName = "{}/{}_{}.mp4".format(self.outputPath, formatted_time, self.frameCount)
         logger.info("Saving motion to %s", fileName)
 
         try:
@@ -104,6 +104,9 @@ class PlateProcessor:
         return merged
 
     def process(self, frame):
+        
+        # We take a clone as we want to safe the origonal to buffer and not the one we have drawn on
+        clone = self.frame1.copy()
         output = self.frame1
         self.debug = None
 
@@ -136,6 +139,7 @@ class PlateProcessor:
             # If this is the first frame of motion we have seen then save the time so we can tag it
             if self.timestampOfFirstMotionFrame is None:
                 self.timestampOfFirstMotionFrame = datetime.now()
+                logger.info("Motion detected")
 
             (x, y, w, h) = cv2.boundingRect(contour)
             rectanglesToMerge.append((x, y, x + w, y + h))
@@ -146,17 +150,17 @@ class PlateProcessor:
             cv2.rectangle(output, (x, y), (x2, y2), (0, 255, 0), 2)
 
         if motion:
-            self.buffer.append(self.frame1)
+            self.buffer.append(clone)
             self.frameWithLastMotion = self.frameCount
         elif self.timestampOfFirstMotionFrame is not None and self.frameWithLastMotion > self.frameCount - self.fps:
             # Motion not seen BUT it was seen less than 1s ago so include
             # NB This smooths the output as it avoids lots of little frames with just 1 or 2 frames of motion in
-            self.buffer.append(self.frame1)
+            self.buffer.append(clone)
         elif self.timestampOfFirstMotionFrame is not None:
             # No motion detected in this frame, but we did see some in the past so save buffer
-            #self.save_video_from_buffer()
+            self.save_video_from_buffer()
             self.buffer.clear()
-            self.firstMotionTimestamp = None
+            self.timestampOfFirstMotionFrame = None
 
         # Switch the frames so when we process frame n+1 against n
         self.frame1 = self.frame2

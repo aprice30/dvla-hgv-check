@@ -83,7 +83,7 @@ def detect_motion():
 			if debug is not None:
 				debugFrame = debug.copy()
 
-		time.sleep(0.1)
+		#time.sleep(0.05)
 
 def generate():
 	# grab global references to the output frame and lock variables
