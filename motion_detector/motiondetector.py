@@ -8,7 +8,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-class PlateProcessor:
+class MotionDetector:
     def __init__(self, fps, outputPath, minMotionArea = 10000):
         self.minMotionArea = minMotionArea
 

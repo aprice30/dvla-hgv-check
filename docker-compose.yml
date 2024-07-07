@@ -1,0 +1,27 @@
+version: '3'
+services:
+    # redis:
+    #     container_name: redis
+    #     image: redis:4.0.6-alpine
+    #     ports:
+    #       - "6379:6379"
+    #     volumes:
+    #         - ./redis:/redis
+
+    dvla-app:
+        image: dvla-app
+        container_name: dvla-app
+        build: ./
+        restart: always
+        ports:
+            - '5000'
+        volumes:
+            - ./app:/app
+
+    # worker:
+    #     image: dvla-app:latest
+    #     depends_on:
+    #         - redis
+    #     command: rq worker --url redis://redis:6379
+    #     links:
+    #         - redis

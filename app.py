@@ -31,7 +31,7 @@ import datetime
 import imutils
 import time
 import cv2
-from plate_processor.plateprocessor import PlateProcessor
+from motion_detector.motiondetector import MotionDetector
 
 # initialize the output frame and a lock used to ensure thread-safe
 # exchanges of the output frames (useful when multiple browsers/tabs
@@ -64,8 +64,8 @@ def detect_motion():
 	fps = int(vs.get(cv2.CAP_PROP_FPS))
 	app.logger.info("Video playing at %s fps", fps)
 
-	processor = PlateProcessor(fps, "/home/myuser/data")
-	processor.loadFirstFrame(frame1=frame1)
+	detector = MotionDetector(fps, "/home/myuser/data")
+	detector.loadFirstFrame(frame1=frame1)
 
     # loop over frames from the video stream
 	while True:
@@ -73,7 +73,7 @@ def detect_motion():
 		if not ret:
 			break
 
-		output, debug = processor.process(frame=frame2)
+		output, debug = detector.process(frame=frame2)
 
 		# acquire the lock, set the output frame, and release the
 		# lock
