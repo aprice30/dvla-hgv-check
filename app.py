@@ -6,7 +6,7 @@
 # Setup logging first
 import logging.handlers
 import logging, sys
-from flask import Response, Flask, render_template
+from flask import Response, Flask, render_template # type: ignore
 	
 # initialize a flask object
 app = Flask(__name__)
@@ -27,11 +27,10 @@ else:
 
 # import the necessary packages
 import threading
-import datetime
-import imutils
 import time
-import cv2
+import cv2 # type: ignore
 from motion_detector.motiondetector import MotionDetector
+from motion_detector.motionprocessor import MotionProcessor
 
 # initialize the output frame and a lock used to ensure thread-safe
 # exchanges of the output frames (useful when multiple browsers/tabs
@@ -64,7 +63,8 @@ def detect_motion():
 	fps = int(vs.get(cv2.CAP_PROP_FPS))
 	app.logger.info("Video playing at %s fps", fps)
 
-	detector = MotionDetector(fps, "/home/myuser/data")
+	processor = MotionProcessor("/home/myuser/data")
+	detector = MotionDetector(fps, processor)
 	detector.loadFirstFrame(frame1=frame1)
 
     # loop over frames from the video stream

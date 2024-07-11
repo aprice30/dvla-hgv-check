@@ -1,18 +1,16 @@
-import cv2
-import imutils
-import numpy as np
+import cv2 # type: ignore
 import logging
-import ffmpegcv
 from collections import deque
 from datetime import datetime
+from motion_detector.motionprocessor import MotionProcessorInterface
 
 logger = logging.getLogger(__name__)
 
 class MotionDetector:
-    def __init__(self, fps, outputPath, minMotionArea = 10000):
+    def __init__(self, fps, motionProcessor: MotionProcessorInterface, minMotionArea = 10000):
+        self.motionProcessor = motionProcessor
         self.minMotionArea = minMotionArea
 
-        self.outputPath = outputPath
         self.fps = fps
 
         # Used to smooth out the frames of motion when we lose motion for a few frames
@@ -22,36 +20,10 @@ class MotionDetector:
 
         # Initialize the circular buffer
         self.buffer = deque()
-
-        return
     
     def loadFirstFrame(self, frame1):
         self.frame1 = frame1
         self.frameCount = 1
-
-    def save_video_from_buffer(self):
-        # Define the codec and create VideoWriter object
-        #fourcc = cv2.VideoWriter_fourcc(*'H264')
-
-        # Create the filename
-        formatted_time = self.timestampOfFirstMotionFrame.strftime("%Y-%m-%d_%H-%M-%S")
-        fileName = "{}/{}_{}.mp4".format(self.outputPath, formatted_time, self.frameCount)
-        logger.info("Saving motion to %s", fileName)
-
-        try:
-
-            with ffmpegcv.VideoWriter(fileName, None, 10) as out:
-                for frame in self.buffer:
-                 out.write(frame)
-
-            #out = cv2.VideoWriter(fileName, fourcc, self.fps, (self.frameWidth, self.frameHeight))
-            #vidout = ffmpegcv.VideoWriterNV(fileName, 'h264', self.fps)
-
-            #for frame in self.buffer:
-            #    out.write(frame)
-            #out.release()
-        except:
-            logger.exception("Failed to save clip")
 
     def rectangles_intersect(self, rect1, rect2):
         """ 
@@ -158,7 +130,7 @@ class MotionDetector:
             self.buffer.append(clone)
         elif self.timestampOfFirstMotionFrame is not None:
             # No motion detected in this frame, but we did see some in the past so save buffer
-            self.save_video_from_buffer()
+            self.motionProcessor.process(self.timestampOfFirstMotionFrame, self.frameCount, self.buffer)
             self.buffer.clear()
             self.timestampOfFirstMotionFrame = None
 
