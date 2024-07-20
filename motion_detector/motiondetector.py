@@ -1,21 +1,16 @@
-import cv2
-import imutils
-import numpy as np
+import cv2 # type: ignore
 import logging
-import ffmpegcv
 from collections import deque
 from datetime import datetime
+from motion_detector.motionprocessor import MotionProcessorInterface
 
-gunicorn_logger = logging.getLogger('gunicorn.error')
 logger = logging.getLogger(__name__)
-logger.setLevel(gunicorn_logger.level)
-logger.handlers = gunicorn_logger.handlers
 
-class PlateProcessor:
-    def __init__(self, fps, outputPath, minMotionArea = 10000):
+class MotionDetector:
+    def __init__(self, fps, motionProcessor: MotionProcessorInterface, minMotionArea = 10000):
+        self.motionProcessor = motionProcessor
         self.minMotionArea = minMotionArea
 
-        self.outputPath = outputPath
         self.fps = fps
 
         # Used to smooth out the frames of motion when we lose motion for a few frames
@@ -25,36 +20,10 @@ class PlateProcessor:
 
         # Initialize the circular buffer
         self.buffer = deque()
-
-        return
     
     def loadFirstFrame(self, frame1):
         self.frame1 = frame1
         self.frameCount = 1
-
-    def save_video_from_buffer(self):
-        # Define the codec and create VideoWriter object
-        #fourcc = cv2.VideoWriter_fourcc(*'H264')
-
-        # Create the filename
-        formatted_time = self.firstMotionTimestamp.strftime("%Y-%m-%d_%H-%M-%S")
-        fileName = "{}/{}.mp4".format(self.outputPath, formatted_time)
-        logger.info("Saving motion to %s", fileName)
-
-        try:
-
-            with ffmpegcv.VideoWriter(fileName, None, 10) as out:
-                for frame in self.buffer:
-                 out.write(frame)
-
-            #out = cv2.VideoWriter(fileName, fourcc, self.fps, (self.frameWidth, self.frameHeight))
-            #vidout = ffmpegcv.VideoWriterNV(fileName, 'h264', self.fps)
-
-            #for frame in self.buffer:
-            #    out.write(frame)
-            #out.release()
-        except:
-            logger.exception("Failed to save clip")
 
     def rectangles_intersect(self, rect1, rect2):
         """ 
@@ -107,6 +76,9 @@ class PlateProcessor:
         return merged
 
     def process(self, frame):
+        
+        # We take a clone as we want to safe the origonal to buffer and not the one we have drawn on
+        clone = self.frame1.copy()
         output = self.frame1
         self.debug = None
 
@@ -139,6 +111,7 @@ class PlateProcessor:
             # If this is the first frame of motion we have seen then save the time so we can tag it
             if self.timestampOfFirstMotionFrame is None:
                 self.timestampOfFirstMotionFrame = datetime.now()
+                logger.info("Motion detected")
 
             (x, y, w, h) = cv2.boundingRect(contour)
             rectanglesToMerge.append((x, y, x + w, y + h))
@@ -149,17 +122,17 @@ class PlateProcessor:
             cv2.rectangle(output, (x, y), (x2, y2), (0, 255, 0), 2)
 
         if motion:
-            self.buffer.append(self.frame1)
+            self.buffer.append(clone)
             self.frameWithLastMotion = self.frameCount
         elif self.timestampOfFirstMotionFrame is not None and self.frameWithLastMotion > self.frameCount - self.fps:
             # Motion not seen BUT it was seen less than 1s ago so include
             # NB This smooths the output as it avoids lots of little frames with just 1 or 2 frames of motion in
-            self.buffer.append(self.frame1)
+            self.buffer.append(clone)
         elif self.timestampOfFirstMotionFrame is not None:
             # No motion detected in this frame, but we did see some in the past so save buffer
-            #self.save_video_from_buffer()
+            self.motionProcessor.process(self.timestampOfFirstMotionFrame, self.frameCount, self.buffer)
             self.buffer.clear()
-            self.firstMotionTimestamp = None
+            self.timestampOfFirstMotionFrame = None
 
         # Switch the frames so when we process frame n+1 against n
         self.frame1 = self.frame2
