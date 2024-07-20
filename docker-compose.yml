@@ -17,4 +17,6 @@ services:
             - '5000'
         volumes:
             - ./videos:/home/myuser/data/videos
-            - ./grabs:/home/myuser/data/grabs
+            - grabs:/home/myuser/data/grabs
+volumes:
+  grabs:
