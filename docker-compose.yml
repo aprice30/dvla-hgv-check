@@ -16,7 +16,13 @@ services:
         ports:
             - '5000'
         volumes:
-            - ./videos:/home/myuser/data/videos
             - grabs:/home/myuser/data/grabs
+    
+    webhook-tester:
+        image: platerecognizer/webhook-tester
+        container_name: webhook-tester
+        environment:
+        - URL=http://dvla-app:5000/send
+
 volumes:
   grabs:

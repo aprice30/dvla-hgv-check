@@ -1,10 +1,40 @@
 <html>
   <head>
-    <title>Pi Video Surveillance</title>
+    <title>DVLA HGV Check</title>
   </head>
   <body>
-    <h1>Pi Video Surveillance</h1>
-    <img src="{{ url_for('debug_feed') }}"/>
-    <img src="{{ url_for('video_feed') }}"/>
+    <h1>DVLA HGV Check</h1>
+    <img id="dynamic-image" src="{{ url_for('capture') }}"  onload="imageLoaded()"/>
+    <pre id="json-data"></pre>
+
+    <script>
+      function fetchData() {
+          fetch('/data')
+              .then(response => response.json())
+              .then(data => {
+                  document.getElementById('json-data').textContent = JSON.stringify(data, null, 2);
+              })
+              .catch(error => console.error('Error fetching data:', error));
+      }
+
+      function imageLoaded() {
+          fetchData();  // Fetch data when the image loads
+
+          // Update the image src to force reload (add a unique parameter to prevent caching)
+          var img = document.getElementById('dynamic-image');
+          img.src = '/capture?' + new Date().getTime();
+      }
+
+      // Initial load
+      document.addEventListener('DOMContentLoaded', function() {
+          imageLoaded();
+      });
+
+      // Periodically change the image every 5 seconds to simulate updates
+      setInterval(function() {
+          var img = document.getElementById('dynamic-image');
+          img.src = '/capture?' + new Date().getTime();
+      }, 5000);
+  </script>
   </body>
 </html>

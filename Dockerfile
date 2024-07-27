@@ -18,7 +18,7 @@ RUN pip3 install --no-cache-dir wheel
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 FROM ubuntu:20.04 AS runner-image
-RUN apt-get update && apt-get install --no-install-recommends -y python3.9 python3-venv ffmpeg && \
+RUN apt-get update && apt-get install --no-install-recommends -y python3.9 python3-venv && \
 	apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --create-home myuser
@@ -39,9 +39,6 @@ ENV PYTHONUNBUFFERED=1
 # activate virtual environment
 ENV VIRTUAL_ENV=/home/myuser/venv
 ENV PATH="/home/myuser/venv/bin:$PATH"
-
-# Run the setup scripts before we start out webserver
-RUN python3 setup.py
 
 # /dev/shm is mapped to shared memory and should be used for gunicorn heartbeat
 # this will improve performance and avoid random freezes

@@ -6,7 +6,7 @@
 # Setup logging first
 import logging.handlers
 import logging, sys
-from flask import Response, Flask, render_template # type: ignore
+from flask import Response, Flask, render_template, request, jsonify # type: ignore
 	
 # initialize a flask object
 app = Flask(__name__)
@@ -27,67 +27,93 @@ else:
 
 # import the necessary packages
 import threading
-import time
-import cv2 # type: ignore
-from motion_detector.motiondetector import MotionDetector
-from motion_detector.motionprocessor import MotionProcessor
+import json
+import os
+import errno
 
 # initialize the output frame and a lock used to ensure thread-safe
 # exchanges of the output frames (useful when multiple browsers/tabs
 # are viewing the stream)
-outputFrame = None
-debugFrame = None
+globalOutput = None
+globalJson = None
 lock = threading.Lock()
 
-# initialize the video stream and allow the camera sensor to
-# warmup
-#vs = VideoStream(usePiCamera=1).start()
-#vs = VideoStream(src=0).start()
-vs = cv2.VideoCapture("/home/myuser/data/videos/testing_long.MOV")
-time.sleep(2.0)
+@app.route('/send', methods = ['GET'])
+def get_index():
+	return "Please use GET request type", 400
+
+upload_to = "/home/myuser/data/grabs"
+
+@app.route('/send', methods = ['POST'])
+def post_index():
+	# grab global references
+	global globalOutput, globalJson, lock
+
+	resp = Response("OK", 200)
+	resp.headers['Content-type'] = 'text/html'
+
+	# Files exist for multipart/form-data
+	files = request.files
+	if files:
+		app.logger.debug(f"files: {files}")
+		app.logger.debug("Request contains image")
+		if not os.path.exists(upload_to):
+			try:
+				os.makedirs(upload_to)
+			except OSError as exc:  # Guard against race condition
+				if exc.errno != errno.EEXIST:
+					raise
+
+		for key in files.keys():  # The file doesn't exist under upload
+			app.logger.debug(f"key: {key}")
+			f = files[key]
+
+			# Read the file content into bytes before saving
+			file_content = f.read()
+			file_path = os.path.join(upload_to, f.filename)
+			with open(file_path, 'wb') as file:
+				file.write(file_content)
+
+			# wait until the lock is acquired
+			with lock:
+				globalOutput = file_content
+			break
+
+		form = request.form
+		jsonData = json.loads(form["json"])
+	else:
+		app.logger.debug("Request contains json")
+		try:
+			jsonStr = request.form.get('json')
+			jsonData = json.loads(jsonStr)
+		except json.JSONDecodeError as e:
+			logging.exception("Unable to decode json from payload")
+			jsonData = {}
+
+	# wait until the lock is acquired
+	with lock:
+		globalJson = jsonData
+
+	app.logger.info(f"json_data: {jsonData}")
+	return resp
 
 @app.route("/")
 def index():
 	# return the rendered template
 	return render_template("index.html")
 
-def detect_motion():
-	# grab global references to the video stream, output frame, and
-	# lock variables
-	global vs, outputFrame, debugFrame, lock
+@app.route("/data")
+def data():
+	# grab global references
+	global globalJson, lock
 
-	ret, frame1 = vs.read()
-	if not ret:
-		return;
+    # wait until the lock is acquired
+	with lock:
+		return jsonify(globalJson)
 
-	fps = int(vs.get(cv2.CAP_PROP_FPS))
-	app.logger.info("Video playing at %s fps", fps)
-
-	processor = MotionProcessor("/home/myuser/data/grabs")
-	detector = MotionDetector(fps, processor)
-	detector.loadFirstFrame(frame1=frame1)
-
-    # loop over frames from the video stream
-	while True:
-		ret, frame2 = vs.read()
-		if not ret:
-			break
-
-		output, debug = detector.process(frame=frame2)
-
-		# acquire the lock, set the output frame, and release the
-		# lock
-		with lock:
-			if output is not None:
-				outputFrame = output.copy()
-			if debug is not None:
-				debugFrame = debug.copy()
-
-		#time.sleep(0.05)
-
-def generate():
-	# grab global references to the output frame and lock variables
-	global outputFrame, lock
+def generate_capture():
+	# grab global references
+	global globalOutput, lock
 	
 	# loop over frames from the output stream
 	while True:
@@ -95,69 +121,19 @@ def generate():
 		with lock:
 			# check if the output frame is available, otherwise skip
 			# the iteration of the loop
-			if outputFrame is None:
+			if globalOutput is None:
 				continue
 			
-			# encode the frame in JPEG format
-			try:
-				(flag, encodedImage) = cv2.imencode(".jpg", outputFrame)
-			except:
-				app.logger.exception("Failed to encode image")
-				continue
-			
-			# ensure the frame was successfully encoded
-			if not flag:
-				continue
-			
-		# yield the output frame in the byte format
-		yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + 
-			bytearray(encodedImage) + b'\r\n')
-	
-def generate_debug():
-	# grab global references to the output frame and lock variables
-	global debugFrame, lock
-	
-	# loop over frames from the output stream
-	while True:
-		# wait until the lock is acquired
-		with lock:
-			# check if the output frame is available, otherwise skip
-			# the iteration of the loop
-			if debugFrame is None:
-				continue
-			
-			# encode the frame in JPEG format
-			try:
-				(flag, encodedImage) = cv2.imencode(".jpg", debugFrame)
-			except:
-				app.logger.exception("Failed to encode image")
-				continue
-			
-			# ensure the frame was successfully encoded
-			if not flag:
-				continue
-			
-		# yield the output frame in the byte format
-		yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + 
-			bytearray(encodedImage) + b'\r\n')
+			# yield the output frame in the byte format
+			yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + 
+				bytearray(globalOutput) + b'\r\n')
 
-@app.route("/video_feed")
-def video_feed():
+@app.route("/capture")
+def capture():
 	# return the response generated along with the specific media
 	# type (mime type)
-	return Response(generate(),
+	return Response(generate_capture(),
 		mimetype = "multipart/x-mixed-replace; boundary=frame")
-
-@app.route("/debug_feed")
-def debug_feed():
-	# return the response generated along with the specific media
-	# type (mime type)
-	return Response(generate_debug(),
-		mimetype = "multipart/x-mixed-replace; boundary=frame")
-
-# start a thread that will perform motion detection
-t = threading.Thread(target=detect_motion, args=(), daemon=True)
-t.start()
 
 # Used for starting locally. Under gunircorn this won't get hit
 if __name__ == "__main__":
