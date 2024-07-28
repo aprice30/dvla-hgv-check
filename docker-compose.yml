@@ -23,6 +23,18 @@ services:
         depends_on:
             - redis
     
+    adminer:
+        container_name: adminer
+        build:
+            context: ./adminer
+            dockerfile: Dockerfile
+        environment:
+            ADMINER_PASSWORD: ${ADMINER_PASSWORD}
+        ports:
+            - 8080:8080
+        volumes:
+            - db:/var/sqlite
+    
     webhook-tester:
         image: platerecognizer/webhook-tester
         container_name: webhook-tester
@@ -33,7 +45,9 @@ services:
         build: .
         command: rq worker --url redis://redis:6379/0 default
         depends_on:
-        - redis
+            - redis
+        volumes:
+            - db:/home/myuser/data/db
 
 volumes:
   grabs:
