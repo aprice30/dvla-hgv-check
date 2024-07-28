@@ -7,8 +7,15 @@ The solution is to report them to the concil who then prosecute the driver and f
 
 This project aims to setup a Computer Vision solution to monitor a road. When motion is detected it will aim to get a number plate from the image. If possible it will use this to query the DVLA to determine if it is > 7.5t. From this it can then be reported to the councils
 
-## Docker Build and run
+## Setup
+1. Create a `.env` file and inside specify your DVLA API Key
 ```
-docker build -t dvla .
-docker run --publish-all --name dvla --network=myNetwork --rm -v grabs:/home/myuser/data dvla
+DVLA_API_KEY=???????????
+```
+
+## Running
+Using docker compose you can easily build and start the app
+```
+docker compose build
+docker compose up -d
 ```
