@@ -6,6 +6,7 @@
 # Setup logging first
 import logging.handlers
 import logging, sys
+import DvlaClient.DvlaClient
 from flask import Response, Flask, render_template, request, jsonify # type: ignore
 	
 # initialize a flask object
@@ -30,6 +31,10 @@ import threading
 import json
 import os
 import errno
+import redis
+import requests
+from rq import Queue
+from DvlaClient.DvlaClient import DvlaClient
 
 # initialize the output frame and a lock used to ensure thread-safe
 # exchanges of the output frames (useful when multiple browsers/tabs
@@ -37,6 +42,17 @@ import errno
 globalOutput = None
 globalJson = None
 lock = threading.Lock()
+
+# Set up Redis connection
+redis_url = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+redis_conn = redis.Redis.from_url(redis_url)
+
+# Initialize an RQ queue
+queue = Queue(connection=redis_conn)
+
+# Create a DVLA client so we can query plates
+api_key = "xxxx"
+dvla_client = DvlaClient(api_key)
 
 @app.route('/send', methods = ['GET'])
 def get_index():
@@ -94,6 +110,12 @@ def post_index():
 	with lock:
 		globalJson = jsonData
 
+	# Send our plate data for further processing
+	for result in jsonData['data']['results']:
+		for candidate in result['candidates']:
+			logging.info(f"Running DVLA check against Plate={candidate['plate']}")
+			queue.enqueue(dvla_client.check_plate, candidate['plate'])
+	
 	app.logger.info(f"json_data: {jsonData}")
 	return resp
 

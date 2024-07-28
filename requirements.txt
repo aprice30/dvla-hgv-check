@@ -2,3 +2,7 @@
 gunicorn
 flask
 gevent
+
+redis
+rq
+requests

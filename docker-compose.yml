@@ -1,12 +1,12 @@
 version: '3'
 services:
-    # redis:
-    #     container_name: redis
-    #     image: redis:4.0.6-alpine
-    #     ports:
-    #       - "6379:6379"
-    #     volumes:
-    #         - ./redis:/redis
+    redis:
+        container_name: redis
+        image: redis:4.0.6-alpine
+        ports:
+          - "6379:6379"
+        volumes:
+            - redis:/redis
 
     dvla-app:
         image: dvla-app
@@ -17,12 +17,21 @@ services:
             - '5000'
         volumes:
             - grabs:/home/myuser/data/grabs
+        depends_on:
+            - redis
     
     webhook-tester:
         image: platerecognizer/webhook-tester
         container_name: webhook-tester
         environment:
         - URL=http://dvla-app:5000/send
+    
+    worker:
+        build: .
+        command: rq worker --url redis://redis:6379/0 default
+        depends_on:
+        - redis
 
 volumes:
   grabs:
+  redis:
