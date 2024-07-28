@@ -1,5 +1,6 @@
 import requests
 import logging
+from DvlaClient.rate_limiter import rate_limiter
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +12,8 @@ class DvlaClient:
         self.api_key = api_key
         logger.info(f"Starting DVLA Client with Key={self.api_key}")
 
+    # This API only allows us to query it once a second so limit requests to ensure we don't overload it
+    @rate_limiter(calls_per_second=1)
     def check_plate(self, plate):
         logger.info(f"Checking Plater={plate}")
         # Define the JSON object
