@@ -1,6 +1,8 @@
 import requests
 import logging
+from typing import Tuple
 from DvlaClient.rate_limiter import rate_limiter
+from DvlaClient.vehicle import Vehicle
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +16,7 @@ class DvlaClient:
 
     # This API only allows us to query it once a second so limit requests to ensure we don't overload it
     @rate_limiter(calls_per_second=1)
-    def check_plate(self, plate):
+    def check_plate(self, plate) -> Vehicle:
         logger.info(f"Checking Plater={plate}")
         # Define the JSON object
         payload = {
@@ -34,7 +36,8 @@ class DvlaClient:
         if response.status_code == 200:
             json = response.json()
             logger.info(f"Plate={plate} found Data={json}")
-            return json
+            vehicle = Vehicle(**json)
+            return vehicle
         else:
             logger.warning(f"Plate={plate} not found Code={response.status_code} Message={response.text}")
             return None
