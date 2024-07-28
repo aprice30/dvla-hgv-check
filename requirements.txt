@@ -6,3 +6,4 @@ gevent
 redis
 rq
 requests
+pydantic

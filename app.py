@@ -26,14 +26,11 @@ else:
 	rootLogger.setLevel(gunicorn_logger.level)
 
 # import the necessary packages
-import threading
-import json
-import os
-import errno
-import redis
-import requests
+import threading, json, os, errno
+import redis, requests
 from rq import Queue
 from PlateProcessor.plate_processor import PlateProcessor
+from Model import model
 
 # initialize the output frame and a lock used to ensure thread-safe
 # exchanges of the output frames (useful when multiple browsers/tabs
@@ -97,7 +94,7 @@ def plate_detected():
 			json_str = request.form.get('json')
 			json_data = json.loads(json_str)
 		except json.JSONDecodeError as e:
-			logging.exception("Unable to decode json from payload")
+			app.logger.exception("Unable to decode json from payload")
 			json_data = {}
 
 	# wait until the lock is acquired
@@ -106,7 +103,15 @@ def plate_detected():
 
 	# Hand over now to our processor to do further work on this result
 	app.logger.info(f"json_data: {json_data}")
-	queue.enqueue(plate_processor.process, json_data['data']);
+	root = model.Root(**json_data)
+	queue.enqueue(plate_processor.process, root)
+
+
+	# data = json_data.get('data')
+	# if data is not None:
+	# 	queue.enqueue(plate_processor.process, data)
+	# else:
+	# 	app.logger.warning(f"Unable to process JSON as expecting 'data' sub element")
 
 	return resp
 
