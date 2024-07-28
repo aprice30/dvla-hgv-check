@@ -39,8 +39,8 @@ from DvlaClient.DvlaClient import DvlaClient
 # initialize the output frame and a lock used to ensure thread-safe
 # exchanges of the output frames (useful when multiple browsers/tabs
 # are viewing the stream)
-globalOutput = None
-globalJson = None
+output_image = None
+output_json = None
 lock = threading.Lock()
 
 # Set up Redis connection
@@ -51,19 +51,15 @@ redis_conn = redis.Redis.from_url(redis_url)
 queue = Queue(connection=redis_conn)
 
 # Create a DVLA client so we can query plates
-api_key = "xxxx"
+api_key = "?????"
 dvla_client = DvlaClient(api_key)
-
-@app.route('/send', methods = ['GET'])
-def get_index():
-	return "Please use GET request type", 400
 
 upload_to = "/home/myuser/data/grabs"
 
-@app.route('/send', methods = ['POST'])
-def post_index():
+@app.route('/plate_detected', methods = ['POST'])
+def plate_detected():
 	# grab global references
-	global globalOutput, globalJson, lock
+	global output_image, output_json, lock
 
 	resp = Response("OK", 200)
 	resp.headers['Content-type'] = 'text/html'
@@ -71,8 +67,8 @@ def post_index():
 	# Files exist for multipart/form-data
 	files = request.files
 	if files:
-		app.logger.debug(f"files: {files}")
 		app.logger.debug("Request contains image")
+		app.logger.debug(f"files: {files}")
 		if not os.path.exists(upload_to):
 			try:
 				os.makedirs(upload_to)
@@ -92,31 +88,31 @@ def post_index():
 
 			# wait until the lock is acquired
 			with lock:
-				globalOutput = file_content
+				output_image = file_content
 			break
 
 		form = request.form
-		jsonData = json.loads(form["json"])
+		json_data = json.loads(form["json"])
 	else:
 		app.logger.debug("Request contains json")
 		try:
-			jsonStr = request.form.get('json')
-			jsonData = json.loads(jsonStr)
+			json_str = request.form.get('json')
+			json_data = json.loads(json_str)
 		except json.JSONDecodeError as e:
 			logging.exception("Unable to decode json from payload")
-			jsonData = {}
+			json_data = {}
 
 	# wait until the lock is acquired
 	with lock:
-		globalJson = jsonData
+		output_json = json_data
 
 	# Send our plate data for further processing
-	for result in jsonData['data']['results']:
+	for result in json_data['data']['results']:
 		for candidate in result['candidates']:
 			logging.info(f"Running DVLA check against Plate={candidate['plate']}")
 			queue.enqueue(dvla_client.check_plate, candidate['plate'])
 	
-	app.logger.info(f"json_data: {jsonData}")
+	app.logger.info(f"json_data: {json_data}")
 	return resp
 
 @app.route("/")
@@ -127,15 +123,15 @@ def index():
 @app.route("/data")
 def data():
 	# grab global references
-	global globalJson, lock
+	global output_json, lock
 
     # wait until the lock is acquired
 	with lock:
-		return jsonify(globalJson)
+		return jsonify(output_json)
 
 def generate_capture():
 	# grab global references
-	global globalOutput, lock
+	global output_image, lock
 	
 	# loop over frames from the output stream
 	while True:
@@ -143,12 +139,12 @@ def generate_capture():
 		with lock:
 			# check if the output frame is available, otherwise skip
 			# the iteration of the loop
-			if globalOutput is None:
+			if output_image is None:
 				continue
 			
 			# yield the output frame in the byte format
 			yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + 
-				bytearray(globalOutput) + b'\r\n')
+				bytearray(output_image) + b'\r\n')
 
 @app.route("/capture")
 def capture():

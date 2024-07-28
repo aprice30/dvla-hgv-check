@@ -24,7 +24,7 @@ services:
         image: platerecognizer/webhook-tester
         container_name: webhook-tester
         environment:
-        - URL=http://dvla-app:5000/send
+        - URL=http://dvla-app:5000/plate_detected
     
     worker:
         build: .
