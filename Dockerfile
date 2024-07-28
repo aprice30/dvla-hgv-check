@@ -27,7 +27,9 @@ COPY --from=builder-image /home/myuser/venv /home/myuser/venv
 USER myuser
 RUN mkdir /home/myuser/code
 RUN mkdir /home/myuser/data/grabs -p
+RUN mkdir /home/myuser/data/db -p
 RUN chown $UID:$GID /home/myuser/data/grabs
+RUN chown $UID:$GID /home/myuser/data/db
 WORKDIR /home/myuser/code
 COPY . .
 

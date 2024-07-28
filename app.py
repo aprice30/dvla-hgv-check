@@ -11,7 +11,7 @@ from flask import Response, Flask, render_template, request, jsonify # type: ign
 # initialize a flask object
 app = Flask(__name__)
 
-if __name__ == "main":
+if __name__ == "__main__":
 	# Running directly so setup custom logging
 	logging.basicConfig(
 		level=logging.INFO,
@@ -30,6 +30,7 @@ import threading, json, os, errno
 import redis, requests
 from rq import Queue
 from PlateProcessor.plate_processor import PlateProcessor
+from PlateProcessor.storage import Storage
 from Model import model
 
 # initialize the output frame and a lock used to ensure thread-safe
@@ -50,6 +51,14 @@ queue = Queue(connection=redis_conn)
 plate_processor = PlateProcessor()
 
 upload_to = "/home/myuser/data/grabs"
+
+@app.before_request
+def initialize():
+    # Ensure our DB is setup before we try and use it
+    if not hasattr(app, 'db_initialized'):
+        storage = Storage()
+        storage.init_db()
+        app.db_initialized = True
 
 @app.route('/plate_detected', methods = ['POST'])
 def plate_detected():

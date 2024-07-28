@@ -19,6 +19,7 @@ services:
             - '5000'
         volumes:
             - grabs:/home/myuser/data/grabs
+            - db:/home/myuser/data/db
         depends_on:
             - redis
     
@@ -37,3 +38,4 @@ services:
 volumes:
   grabs:
   redis:
+  db:

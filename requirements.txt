@@ -2,8 +2,11 @@
 gunicorn
 flask
 gevent
+requests
 
+# storage
 redis
 rq
-requests
+
+# other
 pydantic
