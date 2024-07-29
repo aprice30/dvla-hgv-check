@@ -11,6 +11,10 @@ from flask import Response, Flask, render_template, request, jsonify # type: ign
 # initialize a flask object
 app = Flask(__name__)
 
+# Register blueprints
+from reports.views import reports_bp
+app.register_blueprint(reports_bp, url_prefix='/reports')
+
 if __name__ == "__main__":
 	# Running directly so setup custom logging
 	logging.basicConfig(
