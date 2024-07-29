@@ -35,6 +35,7 @@ class PlateProcessor:
         dvla_vehicle = None
         for candidate in result.candidates:
             candidate: model.Candidate
+            candidate.plate = "LS18YHP"
             logging.info(f"Running DVLA check against Plate={candidate.plate}")
             dvla_vehicle = self.dvla_client.check_plate(candidate.plate)
 

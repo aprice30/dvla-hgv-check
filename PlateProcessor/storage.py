@@ -11,7 +11,6 @@ def first_or_none(lst):
 class Storage:
     def __init__(self):
         self.db_path = '/home/myuser/data/db/dvla.db'
-        return
 
     def init_db(self):
         if not os.path.exists(self.db_path):
@@ -86,7 +85,7 @@ class Storage:
                 RevenueWeight, 
                 WheelPlan,
                 TypeApproval
-            ) VALUES (?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?)
         ''', (vehicle.registrationNumber, vehicle.make, vehicle.colour, vehicle.revenueWeight, vehicle.wheelplan, vehicle.typeApproval))
 
         conn.commit()

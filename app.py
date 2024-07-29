@@ -30,6 +30,7 @@ import threading, json, os, errno
 import redis, requests
 from rq import Queue
 from PlateProcessor.plate_processor import PlateProcessor
+from PlateProcessor.plate_query import PlateQuery
 from PlateProcessor.storage import Storage
 
 # initialize the output frame and a lock used to ensure thread-safe
@@ -48,6 +49,7 @@ queue = Queue(connection=redis_conn)
 
 # Create a plate processor which will handle all processing of the plate results
 plate_processor = PlateProcessor()
+plate_query = PlateQuery()
 
 upload_to = "/home/myuser/data/grabs"
 
@@ -153,6 +155,21 @@ def capture():
 	# type (mime type)
 	return Response(generate_capture(),
 		mimetype = "multipart/x-mixed-replace; boundary=frame")
+
+@app.route('/daily_count/up')
+def daily_up_count():
+	up = plate_query.get_daily_plate_count().Up
+	return Response(str(up), mimetype='text/plain')
+
+@app.route('/daily_count/down')
+def daily_down_count():
+	down = plate_query.get_daily_plate_count().Down
+	return Response(str(down), mimetype='text/plain')
+
+@app.route('/last_10_plates')
+def last_10_plates():
+	data = plate_query.get_latest_plates(10)
+	return render_template('last_10_plates.html', rows=data)
 
 # Used for starting locally. Under gunircorn this won't get hit
 if __name__ == "__main__":

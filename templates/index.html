@@ -1,40 +1,92 @@
-<html>
+<!doctype html>
+<html lang="en">
   <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DVLA HGV Check</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link rel="stylesheet" href="static/styles.css">
+    <script>
+        function fetchData() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('json-data').textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+  
+        function imageLoaded() {
+            fetchData();  // Fetch data when the image loads
+  
+            // Update the image src to force reload (add a unique parameter to prevent caching)
+            var img = document.getElementById('dynamic-image');
+            img.src = '/capture?' + new Date().getTime();
+        }
+  
+        // Initial load
+        document.addEventListener('DOMContentLoaded', function() {
+            imageLoaded();
+        });
+  
+        // Periodically change the image every 5 seconds to simulate updates
+        setInterval(function() {
+            var img = document.getElementById('dynamic-image');
+            img.src = '/capture?' + new Date().getTime();
+        }, 5000);
+    </script>
   </head>
   <body>
-    <h1>DVLA HGV Check</h1>
-    <img id="dynamic-image" src="{{ url_for('capture') }}"  onload="imageLoaded()"/>
-    <pre id="json-data"></pre>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container">
+        <a class="navbar-brand" href="#">DVLA HGV Check</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
+    </nav>
 
-    <script>
-      function fetchData() {
-          fetch('/data')
-              .then(response => response.json())
-              .then(data => {
-                  document.getElementById('json-data').textContent = JSON.stringify(data, null, 2);
-              })
-              .catch(error => console.error('Error fetching data:', error));
-      }
+    <div class="container my-5">
+        <div class="row">
+            <div class="col-md-8">
+                <img id="dynamic-image" class="img-fluid" src="{{ url_for('capture') }}"  onload="imageLoaded()"/>
+            </div>
+            <div class="col-md-4">
+              <div class="row pb-3 m-2">
+                <div class="col-md-6">
+                  <div class="counter-widget">
+                      <div class="counter-value" id="counterValue" hx-get="/daily_count/up" hx-trigger="load, every 30s">??</div>
+                      <div class="counter-label">Up Plates</div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="counter-widget">
+                      <div class="counter-value" id="counterValue" hx-get="/daily_count/down" hx-trigger="load, every 30s">??</div>
+                      <div class="counter-label">Down Plates</div>
+                  </div>
+                </div>
+              </div>
+              <div class="row m-2">
+                <h6>Latest 10 Plates</h6>
+                <table class="table table-sm">
+                  <thead>
+                    <th>Time</th>
+                    <th>Plate</th>
+                    <th>Class</th>
+                    <th>Make</th>
+                    <th>Weight</th>
+                  </thead>
+                  <tbody hx-get="/last_10_plates" hx-trigger="load, every 30s" hx-target="this">
+                      <!-- Table rows will be injected here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+        </div>
+    </div>
 
-      function imageLoaded() {
-          fetchData();  // Fetch data when the image loads
-
-          // Update the image src to force reload (add a unique parameter to prevent caching)
-          var img = document.getElementById('dynamic-image');
-          img.src = '/capture?' + new Date().getTime();
-      }
-
-      // Initial load
-      document.addEventListener('DOMContentLoaded', function() {
-          imageLoaded();
-      });
-
-      // Periodically change the image every 5 seconds to simulate updates
-      setInterval(function() {
-          var img = document.getElementById('dynamic-image');
-          img.src = '/capture?' + new Date().getTime();
-      }, 5000);
-  </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <script src="main.js"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.1" integrity="sha384-QWGpdj554B4ETpJJC9z+ZHJcA/i59TyjxEPXiiUgN2WmTyV5OEZWCD6gQhgkdpB/" crossorigin="anonymous"></script>
   </body>
 </html>
