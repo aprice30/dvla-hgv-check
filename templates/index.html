@@ -52,22 +52,35 @@
                 <img id="dynamic-image" class="img-fluid" src="{{ url_for('capture') }}"  onload="imageLoaded()"/>
             </div>
             <div class="col-md-4">
-              <div class="row pb-3 m-2">
-                <div class="col-md-6">
-                  <div class="counter-widget">
-                      <div class="counter-value" id="counterValue" hx-get="/daily_count/up" hx-trigger="load, every 30s">??</div>
-                      <div class="counter-label">Up Plates</div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="counter-widget">
-                      <div class="counter-value" id="counterValue" hx-get="/daily_count/down" hx-trigger="load, every 30s">??</div>
-                      <div class="counter-label">Down Plates</div>
-                  </div>
-                </div>
+              <div class="row pb-3">
+                <table class="table table-sm">
+                  <thead>
+                    <th>Direction</th>
+                    <th>Today</th>
+                    <th>Week</th>
+                    <th>Month</th>
+                    <th>Year</th>
+                  </thead>
+                  <tbody hx-get="/plate_counts" hx-trigger="load, every 30s" hx-target="this">
+                      <!-- Table rows will be injected here -->
+                  </tbody>
+                </table>
               </div>
-              <div class="row m-2">
-                <h6>Latest 10 Plates</h6>
+              <div class="row pb-3">
+                <table class="table table-sm">
+                  <thead>
+                    <th>Weight</th>
+                    <th>Today</th>
+                    <th>Week</th>
+                    <th>Month</th>
+                    <th>Year</th>
+                  </thead>
+                  <tbody hx-get="/weight_counts" hx-trigger="load, every 30s" hx-target="this">
+                      <!-- Table rows will be injected here -->
+                  </tbody>
+                </table>
+              </div>
+              <div class="row">
                 <table class="table table-sm">
                   <thead>
                     <th>Time</th>

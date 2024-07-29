@@ -156,20 +156,20 @@ def capture():
 	return Response(generate_capture(),
 		mimetype = "multipart/x-mixed-replace; boundary=frame")
 
-@app.route('/daily_count/up')
-def daily_up_count():
-	up = plate_query.get_daily_plate_count().Up
-	return Response(str(up), mimetype='text/plain')
-
-@app.route('/daily_count/down')
-def daily_down_count():
-	down = plate_query.get_daily_plate_count().Down
-	return Response(str(down), mimetype='text/plain')
-
 @app.route('/last_10_plates')
 def last_10_plates():
 	data = plate_query.get_latest_plates(10)
 	return render_template('last_10_plates.html', rows=data)
+
+@app.route('/plate_counts')
+def plate_counts():
+	data = plate_query.get_direction_plate_count()
+	return render_template('plate_counts.html', rows=data)
+
+@app.route('/weight_counts')
+def weight_counts():
+	data = plate_query.get_plates_by_weight()
+	return render_template('plate_counts.html', rows=data)
 
 # Used for starting locally. Under gunircorn this won't get hit
 if __name__ == "__main__":
