@@ -1,7 +1,7 @@
-import sqlite3
 import logging, os, json
 from DvlaClient.vehicle import Vehicle
 from Model import model
+import database
 
 logger = logging.getLogger(__name__)
 
@@ -10,13 +10,13 @@ def first_or_none(lst):
 
 class Storage:
     def __init__(self):
-        self.db_path = '/home/myuser/data/db/dvla.db'
+        return
 
     def init_db(self):
-        if not os.path.exists(self.db_path):
-            logger.warning(f"DB is not setup in {self.db_path}: Building!")
+        if not os.path.exists(database.db_path):
+            logger.warning(f"DB is not setup in {database.db_path}: Building!")
 
-            conn = self._get_connection()
+            conn = database.get_connection()
             cursor = conn.cursor()
             cursor.execute('''
                 CREATE TABLE Capture (
@@ -52,16 +52,11 @@ class Storage:
             ''')
             conn.commit()
             conn.close()
-
-    def _get_connection(self):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
     
     def insert_capture(self, filename: str, timestamp: str, json: str) -> int:
         logger.debug(f"Storing capture event for {filename} @ {timestamp}")
 
-        conn = self._get_connection()
+        conn = database.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO Capture (Filename, Timestamp, RawJson)
@@ -75,7 +70,7 @@ class Storage:
         return new_id
     
     def update_dvla_plate(self, vehicle: Vehicle):
-        conn = self._get_connection()
+        conn = database.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
             INSERT OR REPLACE INTO Plate (
@@ -102,7 +97,7 @@ class Storage:
         plat_box_str = json.dumps(result.box.dict())
         vehicle_box_str = json.dumps(result.vehicle.box.dict())
 
-        conn = self._get_connection()
+        conn = database.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO VehicleResult (

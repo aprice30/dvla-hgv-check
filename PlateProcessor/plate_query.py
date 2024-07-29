@@ -1,14 +1,13 @@
 import logging
-from collections import namedtuple
 from PlateProcessor.storage import Storage
+import database
 
 class PlateQuery:
     def __init__(self):
-        self.db = Storage()
         return
     
     def get_direction_plate_count(self):
-        conn = self.db._get_connection()
+        conn = database.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
             SELECT 
@@ -35,7 +34,7 @@ class PlateQuery:
         return rows
     
     def get_latest_plates(self, count: int):
-        conn = self.db._get_connection()
+        conn = database.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
             SELECT strftime('%H:%M:%S', datetime(Capture.Timestamp, 'localtime')) AS Time, Plate.Plate, Plate.TypeApproval, Plate.VehicleMake, Plate.RevenueWeight from VehicleResult
@@ -51,7 +50,7 @@ class PlateQuery:
         return rows
     
     def get_plates_by_weight(self):
-        conn = self.db._get_connection()
+        conn = database.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
             SELECT

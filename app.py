@@ -12,7 +12,7 @@ from flask import Response, Flask, render_template, request, jsonify # type: ign
 app = Flask(__name__)
 
 # Register blueprints
-from reports.views import reports_bp
+from Reports.views import reports_bp
 app.register_blueprint(reports_bp, url_prefix='/reports')
 
 if __name__ == "__main__":
