@@ -47,7 +47,8 @@ class Storage:
                     VehicleMake TEXT,
                     VehicleColour TEXT,
                     RevenueWeight INTEGER,
-                    WheelPlan TEXT
+                    WheelPlan TEXT,
+                    TypeApproval TEXT
                 );
             ''')
             conn.commit()
@@ -83,9 +84,10 @@ class Storage:
                 VehicleMake, 
                 VehicleColour, 
                 RevenueWeight, 
-                WheelPlan
+                WheelPlan,
+                TypeApproval
             ) VALUES (?, ?, ?, ?, ?)
-        ''', (vehicle.registrationNumber, vehicle.make, vehicle.colour, vehicle.revenueWeight, vehicle.wheelplan))
+        ''', (vehicle.registrationNumber, vehicle.make, vehicle.colour, vehicle.revenueWeight, vehicle.wheelplan, vehicle.typeApproval))
 
         conn.commit()
         conn.close()
