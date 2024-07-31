@@ -123,9 +123,9 @@ def plate_detected():
 	return resp
 
 @app.route("/")
-def index():
+def home():
 	# return the rendered template
-	return render_template("index.html")
+	return render_template("home.html", current_route=request.path)
 
 @app.route("/data")
 def data():

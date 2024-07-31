@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block script %}
+<script>
+  function fetchData() {
+      fetch('/data')
+          .then(response => response.json())
+          .then(data => {
+              document.getElementById('json-data').textContent = JSON.stringify(data, null, 2);
+          })
+          .catch(error => console.error('Error fetching data:', error));
+  }
+
+  function imageLoaded() {
+      fetchData();  // Fetch data when the image loads
+
+      // Update the image src to force reload (add a unique parameter to prevent caching)
+      var img = document.getElementById('dynamic-image');
+      img.src = '/capture?' + new Date().getTime();
+  }
+
+  // Initial load
+  document.addEventListener('DOMContentLoaded', function() {
+      imageLoaded();
+  });
+
+  // Periodically change the image every 5 seconds to simulate updates
+  setInterval(function() {
+      var img = document.getElementById('dynamic-image');
+      img.src = '/capture?' + new Date().getTime();
+  }, 5000);
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+      <img id="dynamic-image" class="img-fluid" src="{{ url_for('capture') }}"  onload="imageLoaded()"/>
+  </div>
+  <div class="col-md-4">
+    <div class="row pb-3">
+      <table class="table table-sm">
+        <thead>
+          <th>Direction</th>
+          <th>Today</th>
+          <th>Week</th>
+          <th>Month</th>
+          <th>Year</th>
+        </thead>
+        <tbody hx-get="/plate_counts" hx-trigger="load, every 30s" hx-target="this">
+            <!-- Table rows will be injected here -->
+        </tbody>
+      </table>
+    </div>
+    <div class="row pb-3">
+      <table class="table table-sm">
+        <thead>
+          <th>Weight</th>
+          <th>Today</th>
+          <th>Week</th>
+          <th>Month</th>
+          <th>Year</th>
+        </thead>
+        <tbody hx-get="/weight_counts" hx-trigger="load, every 30s" hx-target="this">
+            <!-- Table rows will be injected here -->
+        </tbody>
+      </table>
+    </div>
+    <div class="row">
+      <table class="table table-sm">
+        <thead>
+          <th>Time</th>
+          <th>Plate</th>
+          <th>Class</th>
+          <th>Make</th>
+          <th>Weight</th>
+        </thead>
+        <tbody hx-get="/last_10_plates" hx-trigger="load, every 30s" hx-target="this">
+            <!-- Table rows will be injected here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
