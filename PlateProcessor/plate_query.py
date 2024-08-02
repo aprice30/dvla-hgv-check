@@ -37,7 +37,7 @@ class PlateQuery:
         conn = database.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT strftime('%H:%M:%S', datetime(Capture.Timestamp, 'localtime')) AS Time, Plate.Plate, Plate.TypeApproval, Plate.VehicleMake, Plate.RevenueWeight from VehicleResult
+            SELECT Capture.Timestamp, Plate.Plate, Plate.TypeApproval, Plate.VehicleMake, Plate.RevenueWeight from VehicleResult
             JOIN Capture ON Capture.CaptureId = VehicleResult.CaptureId
             JOIN Plate ON Plate.Plate = VehicleResult.DvlaPlate
             ORDER BY Capture.Timestamp DESC

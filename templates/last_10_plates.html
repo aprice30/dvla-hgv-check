@@ -1,7 +1,7 @@
 {% for row in rows %}
 <tr {% if row[4] >= 7500 %}class="table-danger"{% endif %}>
-    <td>{{ row[0] }}</td>
-    <td>{{ row[1] }}</td>
+    <td>{{ row[0] | datetime('%H:%M:%S') }}</td>
+    <td><a href="{{ url_for('plate.plate', plate_str=row[1]) }}">{{ row[1] }}</a></td>
     <td>{{ row[2] }}</td>
     <td>{{ row[3] }}</td>
     <td>{{ row[4] }}</td>

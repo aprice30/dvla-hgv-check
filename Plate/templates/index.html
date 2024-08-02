@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+  <h2>Plate: {{ plate }}</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col">Timestamp</th>
+        <th scope="col">Orientation</th>
+        <th scope="col">Dwell (s)</th>
+        <th scope="col">Image</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% with rows=rows %}
+        {% include 'grid_row.html' %}
+      {% endwith %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

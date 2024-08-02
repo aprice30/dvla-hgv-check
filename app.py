@@ -13,7 +13,10 @@ app = Flask(__name__)
 
 # Register blueprints
 from Reports.views import reports_bp
+from Plate.views import plate_bp
 app.register_blueprint(reports_bp, url_prefix='/reports')
+app.register_blueprint(plate_bp, url_prefix='/plate')
+
 
 if __name__ == "__main__":
 	# Running directly so setup custom logging
@@ -33,6 +36,7 @@ else:
 import threading, json, os, errno
 import redis, requests
 from rq import Queue
+from datetime import datetime
 from PlateProcessor.plate_processor import PlateProcessor
 from PlateProcessor.plate_query import PlateQuery
 from PlateProcessor.storage import Storage
@@ -57,6 +61,12 @@ plate_query = PlateQuery()
 
 upload_to = "/home/myuser/data/grabs"
 
+def format_datetime(value, format='%Y-%m-%d %H:%M:%S'):
+    dt = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+    return dt.strftime(format)
+
+app.jinja_env.filters['datetime'] = format_datetime
+
 @app.before_request
 def initialize():
     # Ensure our DB is setup before we try and use it
@@ -78,9 +88,19 @@ def plate_detected():
 	if files:
 		app.logger.debug("Request contains image")
 		app.logger.debug(f"files: {files}")
-		if not os.path.exists(upload_to):
+
+		# Get the JSON data as we need it to know upload location		
+		form = request.form
+		json_str = form['json']
+		json_data = json.loads(json_str)
+
+		# Ensure our dir exists
+		folder_path = os.path.dirname(json_data['data']['filename'])
+		filename = os.path.basename(json_data['data']['filename'])
+		upload_dir = os.path.join(upload_to, folder_path)
+		if not os.path.exists(upload_dir):
 			try:
-				os.makedirs(upload_to)
+				os.makedirs(upload_dir)
 			except OSError as exc:  # Guard against race condition
 				if exc.errno != errno.EEXIST:
 					raise
@@ -91,7 +111,7 @@ def plate_detected():
 
 			# Read the file content into bytes before saving
 			file_content = f.read()
-			file_path = os.path.join(upload_to, f.filename)
+			file_path = os.path.join(upload_dir, filename)
 			with open(file_path, 'wb') as file:
 				file.write(file_content)
 
@@ -99,10 +119,6 @@ def plate_detected():
 			with lock:
 				output_image = file_content
 			break
-
-		form = request.form
-		json_str = form['json']
-		json_data = json.loads(json_str)
 	else:
 		app.logger.debug("Request contains json")
 		try:

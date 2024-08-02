@@ -42,7 +42,7 @@ class Storage:
             ''')
             cursor.execute('''
                 CREATE TABLE Plate (
-                    Plate TEXT PRIMARY KEY,
+                    Plate TEXT PRIMARY KEY NOT NULL,
                     VehicleMake TEXT,
                     VehicleColour TEXT,
                     RevenueWeight INTEGER,

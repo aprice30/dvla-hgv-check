@@ -1,0 +1,8 @@
+{% for row in rows %}
+<tr>
+    <td>{{ row['Timestamp'] | datetime('%H:%M:%S %a %d %b %Y ') }}</td>
+    <td>{{ row['Orientation'] }}</a></td>
+    <td>{{ row['DwellTime'] }}</td>
+    <td><img src="{{ url_for('plate.images', filename=row['Filename']) }}" alt="{{ row['Filename'] }}" style="max-width: 200px;"></td>
+</tr>
+{% endfor %}
