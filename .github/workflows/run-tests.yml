@@ -4,6 +4,8 @@ name: Run Tests
 
 on:
   push:
+    paths:
+      - 'web-ui/**'   # only trigger on changes under this folder
     branches: [ "**" ]
 
 permissions:

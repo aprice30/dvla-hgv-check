@@ -6,6 +6,8 @@ on:
   #  - cron: '26 16 * * *'
   push:
     branches: [ "main" ]
+    paths:
+      - 'web-ui/**'   # only trigger on changes under this folder
     # Publish semver tags as releases.
     tags: [ 'v*.*.*' ]
 
