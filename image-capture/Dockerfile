@@ -2,6 +2,9 @@ FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y \
     build-essential \
+    python3-dev \
+    libffi-dev \
+    libssl-dev \
     libgl1-mesa-glx \
     libglib2.0-0 \
     python3 \
@@ -13,7 +16,8 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --upgrade pip
+RUN pip3 install --no-cache-dir --prefer-binary -r requirements.txt
 
 COPY . .
 
