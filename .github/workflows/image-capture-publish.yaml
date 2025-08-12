@@ -1,6 +1,7 @@
 name: Docker Publish - Rpi Image Capture
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "main" ]
     paths:
@@ -9,6 +10,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/image-capture
+  MAJOR: 0
+  MINOR: 0
 
 jobs:
   build:
@@ -32,22 +35,32 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch       # tag with branch name, e.g. "main"
-            type=sha                    # tag with commit SHA for uniqueness
+      - name: Set tags
+        id: vars
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
+          SHORT_SHA=${GITHUB_SHA::7}
+          PATCH=${GITHUB_RUN_NUMBER}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v3
+          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+
+          if [ "$SANITIZED_BRANCH" = "main" ]; then
+            echo -e "${REGISTRY}/${IMAGE_NAME}:latest\n${REGISTRY}/${IMAGE_NAME}:${VERSION}\n${REGISTRY}/${IMAGE_NAME}:${SHORT_SHA}" > tags.txt
+          else
+            echo -e "${REGISTRY}/${IMAGE_NAME}:${SANITIZED_BRANCH}-latest\n${REGISTRY}/${IMAGE_NAME}:${SANITIZED_BRANCH}-${VERSION}\n${REGISTRY}/${IMAGE_NAME}:${SANITIZED_BRANCH}-${SHORT_SHA}" > tags.txt
+          fi
+
+          echo "IMAGE_TAGS<<EOF" >> $GITHUB_ENV
+          cat tags.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
         with:
           context: ./image-capture
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ env.IMAGE_TAGS }}
           platforms: linux/amd64,linux/arm/v7,linux/arm64
-          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
