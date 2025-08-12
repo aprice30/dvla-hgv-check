@@ -2,7 +2,7 @@ import cv2 # type: ignore
 import logging
 from collections import deque
 from datetime import datetime
-from motion_detector.motionprocessor import MotionProcessorInterface
+from motion_detector.motion_processor import MotionProcessorInterface
 
 logger = logging.getLogger(__name__)
 

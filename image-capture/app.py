@@ -1,7 +1,15 @@
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler()],
+    force=True
+)
+
 import cv2
 import os
 from datetime import datetime
-from motion_detector.motiondetector import MotionDetector
+from motion_detector.motion_detector import MotionDetector
 
 class FileSavingMotionProcessor:
     def __init__(self, output_dir):
