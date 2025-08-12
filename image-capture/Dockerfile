@@ -14,11 +14,14 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY requirements.txt .
+# Create virtual env
+RUN python3 -m venv venv
 
-RUN pip3 install --upgrade pip
-RUN pip3 install --no-cache-dir --prefer-binary -r requirements.txt
+# Activate venv and upgrade pip/install requirements
+RUN . ./venv/bin/activate && pip install --upgrade pip
+COPY requirements.txt .
+RUN . ./venv/bin/activate && pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python3", "app.py"]
+CMD ["/bin/bash", "-c", ". ./venv/bin/activate && python app.py"]
