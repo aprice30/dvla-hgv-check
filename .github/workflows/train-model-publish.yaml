@@ -1,0 +1,83 @@
+name: Docker Publish - Training Image
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'train-model/**'   # only trigger on changes under this folder
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/train-model
+
+jobs:
+  cpu-training:
+    name: Build & Push CPU Training Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract branch name
+        run: echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
+      - name: List train-model contents
+        run: ls -l train-model
+
+      - name: Print working directory
+        run: pwd
+
+      - name: Build & Push Training CPU Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./train-model
+          file: train-model/Dockerfile.cpu
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cpu
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cpu-latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cpu-${{ env.BRANCH_NAME }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cpu-${{ github.sha }}
+  gpu-training:
+    name: Build & Push GPU Training Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract branch name
+        run: echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
+      - name: Build & Push Training GPU Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./train-model
+          file: train-model/Dockerfile.gpu
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:gpu
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:gpu-latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:gpu-${{ env.BRANCH_NAME }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:gpu-${{ github.sha }}

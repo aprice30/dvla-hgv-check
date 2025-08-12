@@ -1,0 +1,24 @@
+# Common packages
+numpy
+pandas
+matplotlib
+opencv-python
+scikit-learn
+
+# PyTorch (CPU or GPU depending on environment)
+# These lines let pip decide the right version based on environment markers
+torch==2.3.0+cpu; platform_system != "Linux" or extra == "cpu"
+torch==2.3.0; sys_platform == "linux" and extra != "cpu"
+torchvision==0.18.0+cpu; platform_system != "Linux" or extra == "cpu"
+torchvision==0.18.0; sys_platform == "linux" and extra != "cpu"
+
+# TensorFlow (CPU/GPU auto switch)
+tensorflow==2.16.1; extra == "cpu"
+tensorflow==2.16.1; extra != "cpu"
+
+# For training logs and monitoring
+tensorboard
+
+# Other helpful ML utils
+albumentations
+tqdm
