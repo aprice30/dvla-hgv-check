@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Create virtual env
-RUN python3 -m venv venv
+RUN python3 -m venv venv --system-site-packages
 
 # Activate venv and upgrade pip/install requirements
 RUN . ./venv/bin/activate && pip install --upgrade pip
