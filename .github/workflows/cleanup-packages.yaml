@@ -1,0 +1,107 @@
+name: Cleanup old package images
+
+on:
+  workflow_call:
+    inputs:
+      package-name:
+        description: "The package name (without ghcr.io/aprice30) to clean up"
+        required: true
+        type: string
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.event.repository.name }}/${{ inputs.package-name }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Cleanup images
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          PACKAGE_ESCAPED="${IMAGE_NAME//\//%2F}"  # encode slashes
+
+          # Function to fetch versions
+          fetch_versions() {
+            local endpoint="$1"
+            curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+                 -H "Accept: application/vnd.github+json" \
+                 "$endpoint"
+          }
+
+          # Try user endpoint first
+          versions_json=$(fetch_versions "https://api.github.com/users/$OWNER/packages/container/$PACKAGE_ESCAPED/versions")
+
+          # If not an array, try org endpoint
+          if ! echo "$versions_json" | jq -e 'type == "array"' >/dev/null; then
+            versions_json=$(fetch_versions "https://api.github.com/orgs/$OWNER/packages/container/$PACKAGE_ESCAPED/versions")
+          fi
+
+          # If still not an array, fail
+          if ! echo "$versions_json" | jq -e 'type == "array"' >/dev/null; then
+            echo "Could not fetch package versions for $PACKAGE_ESCAPED"
+            echo "$versions_json"
+            exit 1
+          fi
+
+          declare -A keep_ids=()
+          declare -A versions_by_branch=()
+
+          # Parse into arrays
+          mapfile -t versions < <(echo "$versions_json" | jq -c '.[] | {id: .id, tags: .metadata.container.tags, created_at: .created_at}')
+
+          for v in "${versions[@]}"; do
+            id=$(echo "$v" | jq -r '.id')
+            tags=$(echo "$v" | jq -r '.tags[]?')
+            created_at=$(echo "$v" | jq -r '.created_at')
+
+            for tag in $tags; do
+              # Always keep latest tags
+              if [[ "$tag" == "latest" ]] || [[ "$tag" == *"-latest" ]]; then
+                keep_ids["$id"]=1
+                continue
+              fi
+
+              # Determine branch name
+              if [[ "$tag" =~ ^([a-zA-Z0-9._-]+)-[0-9] ]]; then
+                branch="${BASH_REMATCH[1]}"
+              else
+                branch="main"
+              fi
+
+              versions_by_branch["$branch"]+="$created_at|$id|$tag"$'\n'
+            done
+          done
+
+          # Keep latest 10 per branch
+          for branch in "${!versions_by_branch[@]}"; do
+            to_keep=$(echo "${versions_by_branch[$branch]}" | sort -r | head -n 10 | cut -d'|' -f2)
+            for id in $to_keep; do
+              keep_ids["$id"]=1
+            done
+          done
+
+          # Delete everything not in keep_ids
+          for v in "${versions[@]}"; do
+            id=$(echo "$v" | jq -r '.id')
+            tags=$(echo "$v" | jq -r '.tags[]?')
+
+            if [[ -z "${keep_ids[$id]}" ]]; then
+              echo "🗑 Deleting: $tags (id: $id)"
+              curl -s -X DELETE \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/users/$OWNER/packages/container/$PACKAGE_ESCAPED/versions/$id" \
+                || curl -s -X DELETE \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/orgs/$OWNER/packages/container/$PACKAGE_ESCAPED/versions/$id"
+            fi
+          done
