@@ -66,7 +66,11 @@ jobs:
             created_at=$(echo "$v" | jq -r '.created_at')
 
             keep_version=false
-            branch=""  # no default
+            branch=""  # empty by default
+
+            if [[ -n "$tags" ]]; then
+              branch="main"  # default to main only if there are tags
+            fi
 
             for tag in $tags; do
               if [[ "$tag" == "latest" ]] || [[ "$tag" == *"-latest" ]]; then
@@ -81,7 +85,7 @@ jobs:
               continue
             fi
 
-            # Only group by branch if branch tag exists
+            # Only group by branch if a branch was determined
             if [[ -n "$branch" ]]; then
               versions_by_branch["$branch"]+="$created_at|$id"$'\n'
             fi
