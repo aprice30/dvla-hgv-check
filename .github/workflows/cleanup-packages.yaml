@@ -60,30 +60,39 @@ jobs:
           # Parse into arrays
           mapfile -t versions < <(echo "$versions_json" | jq -c '.[] | {id: .id, tags: .metadata.container.tags, created_at: .created_at}')
 
+          # First, parse versions and group by branch based on tags
           for v in "${versions[@]}"; do
             id=$(echo "$v" | jq -r '.id')
             tags=$(echo "$v" | jq -r '.tags[]?')
             created_at=$(echo "$v" | jq -r '.created_at')
 
+            # If any tag is 'latest' or ends with '-latest', always keep whole version
+            keep_version=false
             for tag in $tags; do
-              # Always keep latest tags
               if [[ "$tag" == "latest" ]] || [[ "$tag" == *"-latest" ]]; then
                 keep_ids["$id"]=1
-                continue
+                keep_version=true
+                break
               fi
+            done
+            if $keep_version; then
+              continue
+            fi
 
-              # Determine branch name
+            # Group this version by branch for sorting later
+            # Determine branch name from tag pattern or default to main
+            branch="main"
+            for tag in $tags; do
               if [[ "$tag" =~ ^([a-zA-Z0-9._-]+)-[0-9] ]]; then
                 branch="${BASH_REMATCH[1]}"
-              else
-                branch="main"
+                break
               fi
-
-              versions_by_branch["$branch"]+="$created_at|$id|$tag"$'\n'
             done
+
+            versions_by_branch["$branch"]+="$created_at|$id"$'\n'
           done
 
-          # Keep latest 10 per branch
+          # For each branch, sort by date descending, keep last 10 versions
           for branch in "${!versions_by_branch[@]}"; do
             to_keep=$(echo "${versions_by_branch[$branch]}" | sort -r | head -n 10 | cut -d'|' -f2)
             for id in $to_keep; do
