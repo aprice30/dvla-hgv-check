@@ -64,3 +64,13 @@ jobs:
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+  prune-packages:
+    uses: ./.github/workflows/cleanup-packages.yaml
+    needs: build
+    permissions:
+      contents: read
+      packages: write
+    with:
+      package-name: image-capture
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
