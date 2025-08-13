@@ -64,6 +64,9 @@ jobs:
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Prune dangling images
+        run: docker image prune -f
+
   prune-packages:
     uses: ./.github/workflows/cleanup-packages.yaml
     needs: build
