@@ -60,53 +60,46 @@ jobs:
           # Parse into arrays
           mapfile -t versions < <(echo "$versions_json" | jq -c '.[] | {id: .id, tags: .metadata.container.tags, created_at: .created_at}')
 
-          # First, parse versions and group by branch based on tags
           for v in "${versions[@]}"; do
             id=$(echo "$v" | jq -r '.id')
             tags=$(echo "$v" | jq -r '.tags[]?')
             created_at=$(echo "$v" | jq -r '.created_at')
 
-            # If any tag is 'latest' or ends with '-latest', always keep whole version
             keep_version=false
+            branch=""  # no default
+
             for tag in $tags; do
               if [[ "$tag" == "latest" ]] || [[ "$tag" == *"-latest" ]]; then
-                keep_ids["$id"]=1
                 keep_version=true
-                break
+              elif [[ "$tag" =~ ^([a-zA-Z0-9._-]+)-[0-9] ]]; then
+                branch="${BASH_REMATCH[1]}"
               fi
             done
+
             if $keep_version; then
+              keep_ids["$id"]=1
               continue
             fi
 
-            # Group this version by branch for sorting later
-            # Determine branch name from tag pattern or default to main
-            branch="main"
-            for tag in $tags; do
-              if [[ "$tag" =~ ^([a-zA-Z0-9._-]+)-[0-9] ]]; then
-                branch="${BASH_REMATCH[1]}"
-                break
-              fi
-            done
-
-            versions_by_branch["$branch"]+="$created_at|$id"$'\n'
+            # Only group by branch if branch tag exists
+            if [[ -n "$branch" ]]; then
+              versions_by_branch["$branch"]+="$created_at|$id"$'\n'
+            fi
           done
 
-          # For each branch, sort by date descending, keep last 10 versions
+          # Keep last 10 versions per branch
           for branch in "${!versions_by_branch[@]}"; do
-            to_keep=$(echo "${versions_by_branch[$branch]}" | sort -r | head -n 10 | cut -d'|' -f2)
+            to_keep=$(echo "${versions_by_branch[$branch]}" | sort -r | cut -d'|' -f2 | uniq | head -n 10)
             for id in $to_keep; do
               keep_ids["$id"]=1
             done
           done
 
-          # Delete everything not in keep_ids
+          # Delete all versions not in keep_ids
           for v in "${versions[@]}"; do
             id=$(echo "$v" | jq -r '.id')
-            tags=$(echo "$v" | jq -r '.tags[]?')
-
             if [[ -z "${keep_ids[$id]}" ]]; then
-              echo "🗑 Deleting: $tags (id: $id)"
+              echo "🗑 Deleting version id $id"
               curl -s -X DELETE \
                 -H "Authorization: Bearer $GITHUB_TOKEN" \
                 -H "Accept: application/vnd.github+json" \
