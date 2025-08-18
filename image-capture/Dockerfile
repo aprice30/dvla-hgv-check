@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     python3-dev \
     python3.11-venv \
+    python3-picamera2 \
     libffi-dev \
     libssl-dev \
     libgl1-mesa-glx \
