@@ -332,3 +332,9 @@ ASALocalRun/
 .mfractor/
 
 *.DS_Store
+
+# Local ALPR Engine folders
+detection_engine/models/
+detection_engine/output/
+plate_crop_*.jpg
+result.jpg
