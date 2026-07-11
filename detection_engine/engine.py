@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import cv2
 import numpy as np
@@ -41,6 +42,70 @@ class DetectionEngine:
                 lang=config.OCR_LANG
             )
             print("[Engine] PaddleOCR loaded successfully.")
+
+    def clean_and_validate_plate(self, text):
+        """
+        Cleans OCR output by converting common digit/letter confusions and 
+        validates the plate against the DVLA INF104 modern registration spec.
+        
+        Returns:
+            tuple: (corrected_text or None, failure_reason_string or None)
+        """
+        # 1. Clean spacing and non-alphanumeric chars
+        cleaned = "".join([c for c in text if c.isalnum()]).upper()
+
+        # If the text is too short or too long for a modern UK plate (typically 7 chars)
+        if len(cleaned) != 7:
+            return None, f"Length is {len(cleaned)} (must be exactly 7 characters)"
+
+        # Split into parts: Tag (2 letters), Age (2 numbers), Random Suffix (3 letters)
+        tag, age, suffix = cleaned[0:2], cleaned[2:4], cleaned[4:7]
+
+        # 2. Heuristic Corrections for common OCR confusions
+        letter_replacements = {
+            '1': 'L',  # 1 -> L
+            '0': 'O',  # 0 -> O
+            '2': 'Z',  # 2 -> Z
+            '5': 'S',  # 5 -> S
+            '8': 'B'   # 8 -> B
+        }
+        
+        digit_replacements = {
+            'I': '1',  # I -> 1
+            'O': '0',  # O -> 0
+            'Q': '0',  # Q -> 0
+            'S': '5',  # S -> 5
+            'Z': '2',  # Z -> 2
+            'B': '8',  # B -> 8
+            'G': '6'   # G -> 6
+        }
+
+        # Apply corrections to the tag & suffix (letters)
+        for num, letter in letter_replacements.items():
+            tag = tag.replace(num, letter)
+            suffix = suffix.replace(num, letter)
+
+        # Apply corrections to the age identifier (digits)
+        for letter, num in digit_replacements.items():
+            age = age.replace(letter, num)
+            
+        # Reassemble the corrected string
+        corrected = f"{tag}{age}{suffix}"
+
+        # 3. Apply INF104 Rules and Regex validation
+        # - Tag (first 2 letters): Cannot contain I, Q, or Z
+        # - Age (next 2 chars): Must be digits
+        # - Suffix (last 3 letters): Cannot contain I or Q (but can contain Z)
+        if re.search(r"[IQZ]", tag):
+            return None, f"Local memory tag '{tag}' contains invalid characters (I, Q, or Z)"
+        if not age.isdigit():
+            return None, f"Age identifier '{age}' must contain only digits"
+        if re.search(r"[IQ]", suffix):
+            return None, f"Random suffix '{suffix}' contains invalid characters (I or Q)"
+        if not suffix.isalpha():
+            return None, f"Random suffix '{suffix}' must contain only letters"
+
+        return corrected, None
 
     def process_image(self, image_input):
         """
@@ -132,10 +197,20 @@ class DetectionEngine:
             if highest_ocr_conf < config.MIN_OCR_CONFIDENCE:
                 continue
 
+            corrected_text, reason = self.clean_and_validate_plate(detected_text)
+            if not corrected_text:
+                print(f"[Engine] Plate '{detected_text}' rejected: {reason}")
+                continue
+
+            if corrected_text != detected_text:
+                print(f"[Engine] Corrected plate: '{detected_text}' -> '{corrected_text}'")
+            else:
+                print(f"[Engine] Validated plate: '{detected_text}'")
+
             detections.append({
                 "box": [x1, y1, x2, y2],
                 "plate_confidence": plate_conf,
-                "text": detected_text,
+                "text": corrected_text,
                 "ocr_confidence": highest_ocr_conf,
                 "crop_path": str(crop_path)
             })
