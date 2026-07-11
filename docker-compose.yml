@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  detection-engine:
+    container_name: dvla-detection-engine
+    image: dvla/detection_engine
+    restart: unless-stopped
+    environment:
+      # Video source: 0 for webcam, or set to your RTSP stream URL
+      - CAMERA_SOURCE=${CAMERA_SOURCE:-0}
+      
+      # Target API Settings
+      - SEND_TO_API=${SEND_TO_API:-true}
+      - API_URL=${API_URL:-https://webhook.site/#!/view/afec20af-d873-4b07-a3e8-47cf657322db}
+      
+      # PyTorch & PaddlePaddle config
+      - KMP_DUPLICATE_LIB_OK=TRUE
+      - OMP_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - ULTRALYTICS_TELEMETRY=false
+      - YOLO_VERBOSE=false
+      - PYTHONUNBUFFERED=1
+    
+    volumes:
+      # Persist YOLO (HuggingFace Hub) weight downloads
+      - huggingface-cache:/root/.cache/huggingface
+      
+      # Persist PaddleOCR weight downloads
+      - paddlex-cache:/root/.paddlex
+      
+      # Mount outputs folder to view cropped plates on your host machine
+      - ./detection_engine/output:/app/detection_engine/output
+
+volumes:
+  huggingface-cache:
+    name: alpr-huggingface-cache
+  paddlex-cache:
+    name: alpr-paddlex-cache
