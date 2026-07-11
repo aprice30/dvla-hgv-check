@@ -16,8 +16,6 @@ from detection_engine.engine import DetectionEngine
 from detection_engine.motion import MotionDetector
 import detection_engine.config as config
 
-from detection_engine.dvla_client import DvlaClient
-
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -35,7 +33,6 @@ def detection_worker(engine):
     the YOLO + OCR detection engine on every frame in the batch.
     """
     logger.info("[Worker] Detection worker thread started.")
-    dvla_client = DvlaClient()
     while True:
         try:
             # Block until an event is available in the queue
@@ -93,12 +90,6 @@ def detection_worker(engine):
                     f"Plate Conf: {details['plate_confidence']:.2%} | "
                     f"Frame Index: {details['frame_index']}"
                 )
-                # Call the DVLA API and log the details
-                dvla_details = dvla_client.check_plate(plate)
-                if dvla_details:
-                    logger.info(f"[Result] DVLA Details for '{plate}': {dvla_details}")
-                else:
-                    logger.warning(f"[Result] No DVLA Details returned for '{plate}'")
 
             # 3. Post results and frames payload to API if enabled
             if config.SEND_TO_API and unique_plates:

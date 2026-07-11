@@ -26,10 +26,6 @@ MIN_OCR_CONFIDENCE = 0.60    # Minimum confidence score to accept OCR read text
 OUTPUT_DIR = BASE_DIR / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-# DVLA API Settings
-DVLA_API_KEY = os.getenv("DVLA_API_KEY", "MISSING")
-DVLA_API_URL = "https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles"
-
 # Central API Settings
 API_URL = os.getenv("API_URL", "http://localhost:8000/api/event")
 SEND_TO_API = os.getenv("SEND_TO_API", "false").lower() == "true"
