@@ -10,3 +10,6 @@ DVLA_API_URL = os.getenv("DVLA_API_URL", "https://driver-vehicle-licensing.api.g
 
 # Firestore Settings
 FIRESTORE_CREDS_PATH = os.getenv("FIRESTORE_CREDS_PATH", str(BASE_DIR / "firestore.json"))
+
+# Storage Settings
+DETECTIONS_DIR = os.getenv("DETECTIONS_DIR", str(BASE_DIR / "detections"))

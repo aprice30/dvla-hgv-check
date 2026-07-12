@@ -93,7 +93,7 @@ def detection_worker(engine):
 
             # 3. Post results and frames payload to API if enabled
             if config.SEND_TO_API and unique_plates:
-                logger.info(f"[Worker] Sending {len(unique_plates)} plates and {len(frames)} frames to API...")
+                logger.info(f"[Worker] Sending {len(unique_plates)} plates and associated key frames to API...")
                 try:
                     # Construct metadata JSON
                     metadata_payload = {
@@ -110,12 +110,15 @@ def detection_worker(engine):
                         ]
                     }
 
-                    # Encode all frames of the motion buffer to JPEG bytes
+                    # Encode only key frames used for plate detection to JPEG bytes
                     files = {}
-                    for idx, frame in enumerate(frames):
-                        success, encoded_img = cv2.imencode(".jpg", frame)
-                        if success:
-                            files[f"frame_{idx}"] = (f"frame_{idx}.jpg", encoded_img.tobytes(), "image/jpeg")
+                    for details in unique_plates.values():
+                        idx = details["frame_index"]
+                        # Bounds check to protect against index out of range
+                        if 0 <= idx < len(frames):
+                            success, encoded_img = cv2.imencode(".jpg", frames[idx])
+                            if success:
+                                files[f"frame_{idx}"] = (f"frame_{idx}.jpg", encoded_img.tobytes(), "image/jpeg")
 
                     # Attach metadata as a string form field
                     data = {"metadata": json.dumps(metadata_payload)}

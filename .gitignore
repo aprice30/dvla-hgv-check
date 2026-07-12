@@ -339,5 +339,6 @@ ASALocalRun/
 # Local ALPR Engine folders
 detection_engine/models/
 detection_engine/output/
+backend/detections/
 plate_crop_*.jpg
 result.jpg

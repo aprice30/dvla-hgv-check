@@ -1,13 +1,16 @@
 import logging
 import json
 import uuid
-from typing import List
+import uuid6
+from typing import List, Tuple
 from datetime import datetime
 from fastapi import FastAPI, Request, HTTPException, UploadFile, BackgroundTasks
 from pydantic import BaseModel, Field
 
+import config
 from dvla_client import DvlaClient
 from repository import EventRepository
+from image_storage import ImageStorage
 
 # Setup logger
 logging.basicConfig(
@@ -18,9 +21,10 @@ logger = logging.getLogger("backend")
 
 app = FastAPI(title="DVLA HGV Check - Backend")
 
-# Initialize central DVLA Client & Firestore Repository
+# Initialize central services
 dvla_client = DvlaClient()
 event_repo = EventRepository()
+image_storage = ImageStorage()
 
 class Detection(BaseModel):
     plate: str = Field(..., alias="text")
@@ -51,6 +55,13 @@ def run_dvla_check_task(event_id: str, plate: str):
         logger.warning(f"[Task] FAILED/NO MATCH - Event={event_id} | Plate='{plate}'")
         event_repo.update_dvla_failed(event_id, plate)
 
+def process_and_save_frames_task(event_id: str, files_data: List[Tuple[str, bytes]], detections: List[dict]):
+    """
+    Background task wrapper that delegates image processing and snapshot compression
+    to the ImageStorage service class.
+    """
+    image_storage.save_event_media(event_id, files_data, detections)
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
@@ -59,8 +70,8 @@ def health_check():
 async def receive_event(request: Request, background_tasks: BackgroundTasks):
     """
     Endpoint to receive events from the detection camera node.
-    Saves event metadata to Firestore, queues background DVLA lookups,
-    and returns immediately.
+    Saves event metadata to Firestore, copies image frames to storage,
+    compiles a summary GIF, and runs background DVLA lookups.
     """
     try:
         form = await request.form()
@@ -82,20 +93,20 @@ async def receive_event(request: Request, background_tasks: BackgroundTasks):
         logger.error(f"Metadata validation failed: {e}")
         raise HTTPException(status_code=422, detail=f"Metadata validation error: {str(e)}")
 
-    # Generate a unique event ID (UUID)
-    event_id = str(uuid.uuid4())
+    # Generate a unique event ID (UUIDv7 - time sortable)
+    event_id = str(uuid6.uuid7())
 
     # Retrieve all files from the multipart form
     uploaded_files = {}
     for key, value in form.items():
-        if isinstance(value, UploadFile):
+        if hasattr(value, "file") and hasattr(value, "filename"):
             uploaded_files[key] = value
 
     # Log the incoming event details
     logger.info("=" * 60)
     logger.info(f"Received motion event. Generated ID: {event_id}")
     logger.info(f"Timestamp: {metadata.timestamp}")
-    logger.info(f"Associated image frames: {len(uploaded_files)} files ({', '.join(uploaded_files.keys())})")
+    logger.info(f"Associated image frames: {len(uploaded_files)} files")
     logger.info(f"Unique plates detected ({len(metadata.plates)} total):")
     for idx, detection in enumerate(metadata.plates):
         logger.info(
@@ -105,6 +116,15 @@ async def receive_event(request: Request, background_tasks: BackgroundTasks):
             f"Frame Index: {detection.frame_index}"
         )
     logger.info("=" * 60)
+
+    # Read frame file bytes in request thread before stream closes
+    files_data = []
+    for filename, upload_file in uploaded_files.items():
+        try:
+            content = await upload_file.read()
+            files_data.append((filename, content))
+        except Exception as read_err:
+            logger.error(f"Failed to read file {filename} bytes: {read_err}")
 
     # Save event metadata to database repository
     plates_data = [
@@ -126,6 +146,10 @@ async def receive_event(request: Request, background_tasks: BackgroundTasks):
     # Queue the DVLA lookup tasks for each unique plate in the background
     for detection in metadata.plates:
         background_tasks.add_task(run_dvla_check_task, event_id, detection.plate)
+
+    # Queue the frame saving task in the background
+    if files_data:
+        background_tasks.add_task(process_and_save_frames_task, event_id, files_data, plates_data)
 
     # Return acknowledgement immediately
     return {
