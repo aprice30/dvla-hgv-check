@@ -12,9 +12,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Upgrade pip and pre-install CPU-only PyTorch to prevent installing heavy CUDA binaries
+# Upgrade pip and pre-install CPU-only PyTorch based on architecture (prevents heavy CUDA binaries on amd64)
+ARG TARGETPLATFORM
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+    if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+        pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu; \
+    else \
+        pip install --no-cache-dir torch torchvision; \
+    fi
 
 # Install the rest of the requirements
 COPY requirements.txt .

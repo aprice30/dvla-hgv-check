@@ -61,7 +61,7 @@ jobs:
           context: ./detection_engine
           push: true
           tags: ${{ env.IMAGE_TAGS }}
-          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Prune dangling images
