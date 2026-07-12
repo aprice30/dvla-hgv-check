@@ -1,15 +1,15 @@
-name: Docker Publish - Rpi Image Capture
+name: Docker Publish - Detection Engine
 
 on:
   workflow_dispatch:
   push:
     branches: [ "main" ]
     paths:
-      - 'image-capture/**'   # only trigger on changes under this folder
+      - 'detection_engine/**'   # only trigger on changes under this folder
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/image-capture
+  IMAGE_NAME: ${{ github.repository }}/detection-engine
   MAJOR: 0
   MINOR: 0
 
@@ -58,7 +58,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./image-capture
+          context: ./detection_engine
           push: true
           tags: ${{ env.IMAGE_TAGS }}
           platforms: linux/amd64,linux/arm/v7,linux/arm64
@@ -74,6 +74,6 @@ jobs:
       contents: read
       packages: write
     with:
-      package-name: image-capture
+      package-name: detection-engine
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}

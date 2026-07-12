@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  dvla-backend:
+    container_name: dvla-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DVLA_API_KEY=${DVLA_API_KEY}
+      - FIRESTORE_CREDS_PATH=/app/firestore.json
+    volumes:
+      # Mount the ignored firestore credentials file if present
+      - ./backend/firestore.json:/app/firestore.json
+      # Mount output folder to view saved frames and generated GIFs on host
+      - ./backend/detections:/app/detections
+
+  detection-engine:
+    container_name: dvla-detection-engine
+    image: dvla/detection_engine
+    restart: unless-stopped
+    depends_on:
+      - dvla-backend
+    environment:
+      # Video source: 0 for webcam, or set to your RTSP stream URL
+      - CAMERA_SOURCE=${CAMERA_SOURCE:-0}
+      
+      # Target API Settings
+      - SEND_TO_API=${SEND_TO_API:-true}
+      - API_URL=${API_URL:-http://dvla-backend:8000/api/event}
+      
+      # PyTorch & PaddlePaddle config
+      - KMP_DUPLICATE_LIB_OK=TRUE
+      - OMP_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - ULTRALYTICS_TELEMETRY=false
+      - YOLO_VERBOSE=false
+      - PYTHONUNBUFFERED=1
+    
+    volumes:
+      # Persist YOLO (HuggingFace Hub) weight downloads
+      - huggingface-cache:/root/.cache/huggingface
+      
+      # Persist PaddleOCR weight downloads
+      - paddlex-cache:/root/.paddlex
+      
+      # Mount outputs folder to view cropped plates on your host machine
+      - ./detection_engine/output:/app/detection_engine/output
+
+volumes:
+  huggingface-cache:
+    name: alpr-huggingface-cache
+  paddlex-cache:
+    name: alpr-paddlex-cache
